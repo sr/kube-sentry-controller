@@ -1,0 +1,3 @@
+version: "1"
+domain: sr.github.com
+repo: github.com/sr/kube-sentry-controller
