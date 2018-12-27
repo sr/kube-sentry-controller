@@ -49,20 +49,17 @@ func (r *reconcilerSet) Team(request reconcile.Request) (reconcile.Result, error
 		}
 
 		if instance.Status.Slug != "" {
-			team, err := r.sentry.GetTeam(org, instance.Status.Slug)
-			if err != nil {
-				return reconcile.Result{}, errors.Wrapf(err, "failed to get team %s/%s", *org.Slug, instance.Status.Slug)
-			}
-			if err := r.sentry.DeleteTeam(org, team); err != nil {
-				return reconcile.Result{}, errors.Wrapf(err, "failed to delete team %s/%s", *org.Slug, instance.Status.Slug)
+			err := r.sentry.DeleteTeam(org, sentry.Team{Slug: &instance.Status.Slug})
+
+			if err != nil && !isNotFound(err) {
+				return reconcile.Result{}, errors.Wrapf(err, "failed to delete team %s", instance.Status.Slug)
 			}
 		}
 
+		instance.Status = sentryv1alpha1.TeamStatus{}
 		removeFinalizer(instance)
-		if err := r.kube.Update(context.TODO(), instance); err != nil {
-			return reconcile.Result{}, errors.Wrap(err, "failed to remove finalizer")
-		}
-		return reconcile.Result{}, nil
+
+		return reconcile.Result{}, r.kube.Update(context.TODO(), instance)
 	}
 
 	if !hasFinalizer(instance) {
@@ -88,15 +85,12 @@ func (r *reconcilerSet) Team(request reconcile.Request) (reconcile.Result, error
 		return reconcile.Result{}, errors.Wrapf(err, "failed to get team %s", instance.Status.Slug)
 	}
 
-	if team.Name != instance.Spec.Name {
-		team.Name = instance.Spec.Name
-
-		if err := r.sentry.UpdateTeam(org, team); err != nil {
-			return reconcile.Result{}, errors.Wrapf(err, "failed to update team %s", instance.Status.Slug)
-		}
+	if team.Name == instance.Spec.Name {
+		return reconcile.Result{}, nil
 	}
 
-	return reconcile.Result{}, nil
+	team.Name = instance.Spec.Name
+	return reconcile.Result{}, r.sentry.UpdateTeam(org, team)
 }
 
 // +kubebuilder:rbac:groups=sentry.sr.github.com,resources=sentryprojects,verbs=get;list;watch;create;update;patch;delete
@@ -121,26 +115,16 @@ func (r *reconcilerSet) Project(request reconcile.Request) (reconcile.Result, er
 		}
 
 		if instance.Status.Slug != "" {
-			proj, err := r.sentry.GetProject(org, instance.Status.Slug)
-			if err != nil {
-				// Ignore 404 errors
-				if v, ok := err.(sentry.APIError); !ok || v.StatusCode != 404 {
-					return reconcile.Result{}, errors.Wrapf(err, "failed to get project %s/%s", *org.Slug, *proj.Slug)
-				}
-			}
-
-			if err := r.sentry.DeleteProject(org, proj); err != nil {
-				return reconcile.Result{}, errors.Wrapf(err, "failed to delete project %s/%s", *org.Slug, *proj.Slug)
+			err := r.sentry.DeleteProject(org, sentry.Project{Slug: &instance.Status.Slug})
+			if err != nil && !isNotFound(err) {
+				return reconcile.Result{}, errors.Wrapf(err, "failed to delete project %s/%s", *org.Slug, instance.Status.Slug)
 			}
 		}
 
 		removeFinalizer(instance)
 		instance.Status = sentryv1alpha1.ProjectStatus{}
 
-		if err := r.kube.Update(context.TODO(), instance); err != nil {
-			return reconcile.Result{}, errors.Wrap(err, "failed to remove finalizer")
-		}
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, r.kube.Update(context.TODO(), instance)
 	}
 
 	if !hasFinalizer(instance) {
@@ -190,11 +174,7 @@ func (r *reconcilerSet) Project(request reconcile.Request) (reconcile.Result, er
 		}
 	}
 
-	if err := r.kube.Update(context.TODO(), instance); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, r.kube.Update(context.TODO(), instance)
 }
 
 // +kubebuilder:rbac:groups=sentry.sr.github.com,resources=teams,verbs=get;list;watch;create;update;patch;delete
@@ -220,22 +200,16 @@ func (r *reconcilerSet) ClientKey(request reconcile.Request) (reconcile.Result, 
 		}
 
 		if instance.Status.ID != "" {
-			proj, err := r.sentry.GetProject(org, instance.Status.Project)
-			if err != nil {
-				return reconcile.Result{}, errors.Wrapf(err, "failed to get project %s/%s", *org.Slug, instance.Status.Project)
-			}
-			if err := r.sentry.DeleteClientKey(org, proj, sentry.Key{ID: instance.Status.ID}); err != nil {
-				return reconcile.Result{}, errors.Wrapf(err, "failed to delete client key for project %s/%s", *org.Slug, *proj.Slug)
+			err := r.sentry.DeleteClientKey(org, sentry.Project{Slug: &instance.Status.Project}, sentry.Key{ID: instance.Status.ID})
+			if err != nil && !isNotFound(err) {
+				return reconcile.Result{}, errors.Wrapf(err, "failed to delete client key for project %s", instance.Status.Project)
 			}
 		}
 
 		removeFinalizer(instance)
 		instance.Status = sentryv1alpha1.ClientKeyStatus{}
 
-		if err := r.kube.Update(context.TODO(), instance); err != nil {
-			return reconcile.Result{}, errors.Wrap(err, "failed to remove finalizer")
-		}
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, r.kube.Update(context.TODO(), instance)
 	}
 
 	if !hasFinalizer(instance) {
@@ -247,7 +221,8 @@ func (r *reconcilerSet) ClientKey(request reconcile.Request) (reconcile.Result, 
 	}
 
 	kubeProj := &sentryv1alpha1.Project{}
-	if err := r.kube.Get(context.TODO(), client.ObjectKey{Namespace: instance.Spec.ProjectRef.Namespace, Name: instance.Spec.ProjectRef.Name}, kubeProj); err != nil {
+	k := client.ObjectKey{Namespace: instance.Spec.ProjectRef.Namespace, Name: instance.Spec.ProjectRef.Name}
+	if err := r.kube.Get(context.TODO(), k, kubeProj); err != nil {
 		return reconcile.Result{}, errors.Wrap(err, "failed to get project referenced in projectRef")
 	}
 
@@ -315,20 +290,16 @@ func (r *reconcilerSet) ClientKey(request reconcile.Request) (reconcile.Result, 
 			return reconcile.Result{}, err
 		}
 
-		if err := r.kube.Create(context.TODO(), secret); err != nil {
-			return reconcile.Result{}, errors.Wrapf(err, "failed to create secret")
-		}
+		err := r.kube.Create(context.TODO(), secret)
+		return reconcile.Result{}, errors.Wrapf(err, "failed to create secret")
+	}
+
+	if reflect.DeepEqual(secret.Data, found.Data) {
 		return reconcile.Result{}, nil
 	}
-	if !reflect.DeepEqual(secret.Data, found.Data) {
-		found.Data = secret.Data
 
-		if err := r.kube.Update(context.TODO(), found); err != nil {
-			return reconcile.Result{}, errors.Wrapf(err, "failed to update secret %s/%s", secret.Namespace, secret.Name)
-		}
-	}
-
-	return reconcile.Result{}, nil
+	found.Data = secret.Data
+	return reconcile.Result{}, r.kube.Update(context.TODO(), found)
 }
 
 func hasFinalizer(obj metav1.Object) bool {
@@ -348,4 +319,15 @@ func removeFinalizer(obj metav1.Object) {
 		}
 	}
 	obj.SetFinalizers(finalizers)
+}
+
+func isNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	v, ok := err.(sentry.APIError)
+	if !ok {
+		return false
+	}
+	return (v.StatusCode == 404)
 }

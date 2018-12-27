@@ -374,6 +374,46 @@ func TestClientKeyReconciler(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "delete noops when project has already been deleted",
+			kube: []runtime.Object{
+				&sentryv1alpha1.ClientKey{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "testing",
+						Name:              "test-key",
+						DeletionTimestamp: &metav1.Time{Time: time.Now()},
+						Finalizers:        []string{finalizerName},
+					},
+					Spec: sentryv1alpha1.ClientKeySpec{
+						Name: "new key name",
+						ProjectRef: sentryv1alpha1.ProjectReference{
+							Namespace: "testing",
+							Name:      "test-proj",
+						},
+					},
+					Status: sentryv1alpha1.ClientKeyStatus{
+						ID:      "1",
+						Project: "my-project",
+					},
+				},
+			},
+			req: reconcile.Request{
+				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test-key"},
+			},
+			sentry: &fakeSentryClient{
+				orgs: []sentry.Organization{
+					{
+						Slug: strP("my-sentry-org"),
+					},
+				},
+			},
+			wantClientKeys: []sentry.Key{},
+			wantKubeClientKey: &sentryv1alpha1.ClientKey{
+				ObjectMeta: metav1.ObjectMeta{
+					Finalizers: nil,
+				},
+			},
+		},
 	} {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
@@ -637,8 +677,43 @@ func TestTeamReconciler(t *testing.T) {
 					Name:       "test-team",
 					Finalizers: nil,
 				},
-				Status: sentryv1alpha1.TeamStatus{
-					Slug: "test-team",
+				Status: sentryv1alpha1.TeamStatus{},
+			},
+		},
+		{
+			name: "deletes noop when team does not exist",
+			kube: []runtime.Object{
+				&sentryv1alpha1.Team{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "testing",
+						Name:              "test-team",
+						DeletionTimestamp: &metav1.Time{Time: time.Now()},
+						Finalizers:        []string{finalizerName},
+					},
+					Spec: sentryv1alpha1.TeamSpec{
+						Name: "Test Name",
+					},
+					Status: sentryv1alpha1.TeamStatus{
+						Slug: "test-team",
+					},
+				},
+			},
+			req: reconcile.Request{
+				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test-team"},
+			},
+			sentry: &fakeSentryClient{
+				orgs: []sentry.Organization{
+					{
+						Slug: strP("my-sentry-org"),
+					},
+				},
+			},
+			wantSentryTeams: []sentry.Team{},
+			wantKubeTeam: &sentryv1alpha1.Team{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  "testing",
+					Name:       "test-team",
+					Finalizers: nil,
 				},
 			},
 		},
@@ -1023,6 +1098,38 @@ func TestProjectReconciler(t *testing.T) {
 					Finalizers: nil,
 				},
 				Status: sentryv1alpha1.ProjectStatus{},
+			},
+		},
+		{
+			name: "delete noops when project has already been deleted",
+			kube: []runtime.Object{
+				&sentryv1alpha1.Project{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "testing",
+						Name:              "test",
+						DeletionTimestamp: &metav1.Time{Time: time.Now()},
+						Finalizers:        []string{finalizerName},
+					},
+					Status: sentryv1alpha1.ProjectStatus{
+						Slug: "my-project",
+					},
+				},
+			},
+			req: reconcile.Request{
+				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test"},
+			},
+			sentry: &fakeSentryClient{
+				orgs: []sentry.Organization{
+					{
+						Slug: strP("my-sentry-org"),
+					},
+				},
+			},
+			wantProjects: []sentry.Project{},
+			wantKubeProject: &sentryv1alpha1.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Finalizers: nil,
+				},
 			},
 		},
 	} {

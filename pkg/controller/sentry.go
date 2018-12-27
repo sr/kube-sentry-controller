@@ -77,7 +77,7 @@ func (s *fakeSentryClient) UpdateTeam(org sentry.Organization, team sentry.Team)
 func (s *fakeSentryClient) DeleteTeam(org sentry.Organization, team sentry.Team) error {
 	var found bool
 	for _, t := range s.teams {
-		if t.Slug == team.Slug {
+		if *t.Slug == *team.Slug {
 			found = true
 			break
 		}
@@ -88,7 +88,7 @@ func (s *fakeSentryClient) DeleteTeam(org sentry.Organization, team sentry.Team)
 
 	teams := []sentry.Team{}
 	for _, t := range s.teams {
-		if t.Slug != team.Slug {
+		if *t.Slug != *team.Slug {
 			teams = append(teams, t)
 		}
 	}
