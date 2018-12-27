@@ -1,4 +1,4 @@
-package controller
+package sentrycontroller
 
 import (
 	"github.com/go-logr/logr"

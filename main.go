@@ -72,7 +72,7 @@ func run() error {
 		return errors.Wrap(err, "failed to set up sentry client")
 	}
 
-	if err := controller.New(mgr, logger, sentry, opts.org); err != nil {
+	if err := sentrycontroller.New(mgr, logger, sentry, opts.org); err != nil {
 		return errors.Wrap(err, "failed to registry sentry controllers with the manager")
 	}
 
