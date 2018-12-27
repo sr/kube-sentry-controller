@@ -6,14 +6,20 @@ import (
 
 // ProjectSpec defines the desired state of Project
 type ProjectSpec struct {
-	Name string `json:"name"`
-	Team string `json:"team"`
+	Name    string        `json:"name"`
+	TeamRef TeamReference `json:"teamRef,omitempty"`
 }
 
 // ProjectStatus defines the observed state of Project
 type ProjectStatus struct {
 	Slug string `json:"slug"`
 	Team string `json:"team"`
+}
+
+// TeamReference is a reference to a Team object.
+type TeamReference struct {
+	Namespace string `json:"namespace"`
+	Name      string `json:"name"`
 }
 
 // +genclient

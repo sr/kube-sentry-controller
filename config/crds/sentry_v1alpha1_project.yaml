@@ -30,11 +30,18 @@ spec:
           properties:
             name:
               type: string
-            team:
-              type: string
+            teamRef:
+              properties:
+                name:
+                  type: string
+                namespace:
+                  type: string
+              required:
+              - namespace
+              - name
+              type: object
           required:
           - name
-          - team
           type: object
         status:
           properties:

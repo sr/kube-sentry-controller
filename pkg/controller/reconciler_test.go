@@ -627,14 +627,13 @@ func TestProjectReconciler(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	Project := &sentryv1alpha1.Project{
+	testProject := &sentryv1alpha1.Project{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "testing",
 		},
 		Spec: sentryv1alpha1.ProjectSpec{
 			Name: "My Test Project",
-			Team: "my-team",
 		},
 	}
 
@@ -658,7 +657,7 @@ func TestProjectReconciler(t *testing.T) {
 		},
 		{
 			name: "errors if organization does not exist",
-			kube: []runtime.Object{Project},
+			kube: []runtime.Object{testProject},
 			req: reconcile.Request{
 				client.ObjectKey{Namespace: "testing", Name: "test"},
 			},
@@ -666,8 +665,22 @@ func TestProjectReconciler(t *testing.T) {
 			wantErr: errors.New("failed to get organization"),
 		},
 		{
-			name: "errors if team does not exist",
-			kube: []runtime.Object{Project},
+			name: "errors if referenced team object not exist",
+			kube: []runtime.Object{
+				&sentryv1alpha1.Project{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "testing",
+					},
+					Spec: sentryv1alpha1.ProjectSpec{
+						Name: "My Test Project",
+						TeamRef: sentryv1alpha1.TeamReference{
+							Namespace: "testing",
+							Name:      "team-not-found",
+						},
+					},
+				},
+			},
 			req: reconcile.Request{
 				client.ObjectKey{Namespace: "testing", Name: "test"},
 			},
@@ -678,7 +691,48 @@ func TestProjectReconciler(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("failed to get team"),
+			wantErr: errors.New("failed to get team referenced"),
+		},
+		{
+			name: "errors if team does not exist",
+			kube: []runtime.Object{
+				&sentryv1alpha1.Team{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "testing",
+						Name:      "test",
+					},
+					Spec: sentryv1alpha1.TeamSpec{
+						Name: "Test Team",
+					},
+					Status: sentryv1alpha1.TeamStatus{
+						Slug: "test-team",
+					},
+				},
+				&sentryv1alpha1.Project{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "testing",
+					},
+					Spec: sentryv1alpha1.ProjectSpec{
+						Name: "My Test Project",
+						TeamRef: sentryv1alpha1.TeamReference{
+							Namespace: "testing",
+							Name:      "test",
+						},
+					},
+				},
+			},
+			req: reconcile.Request{
+				client.ObjectKey{Namespace: "testing", Name: "test"},
+			},
+			sentry: &fakeSentryClient{
+				orgs: []sentry.Organization{
+					{
+						Slug: strP("my-sentry-org"),
+					},
+				},
+			},
+			wantErr: errors.New("failed to get team my-sentry-org/test-team"),
 		},
 		{
 			name: "creates sentry project",
@@ -690,7 +744,22 @@ func TestProjectReconciler(t *testing.T) {
 					},
 					Spec: sentryv1alpha1.ProjectSpec{
 						Name: "My Test Project",
-						Team: "my-team",
+						TeamRef: sentryv1alpha1.TeamReference{
+							Namespace: "testing",
+							Name:      "test",
+						},
+					},
+				},
+				&sentryv1alpha1.Team{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "testing",
+						Name:      "test",
+					},
+					Spec: sentryv1alpha1.TeamSpec{
+						Name: "My Test Project",
+					},
+					Status: sentryv1alpha1.TeamStatus{
+						Slug: "my-team",
 					},
 				},
 			},
@@ -738,10 +807,25 @@ func TestProjectReconciler(t *testing.T) {
 					},
 					Spec: sentryv1alpha1.ProjectSpec{
 						Name: "My Test Project",
-						Team: "my-team",
+						TeamRef: sentryv1alpha1.TeamReference{
+							Namespace: "testing",
+							Name:      "test",
+						},
 					},
 					Status: sentryv1alpha1.ProjectStatus{
 						Slug: "my-test-project",
+					},
+				},
+				&sentryv1alpha1.Team{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "testing",
+					},
+					Spec: sentryv1alpha1.TeamSpec{
+						Name: "My Test Project",
+					},
+					Status: sentryv1alpha1.TeamStatus{
+						Slug: "my-team",
 					},
 				},
 			},
@@ -800,7 +884,10 @@ func TestProjectReconciler(t *testing.T) {
 					},
 					Spec: sentryv1alpha1.ProjectSpec{
 						Name: "My Test Project",
-						Team: "my-team",
+						TeamRef: sentryv1alpha1.TeamReference{
+							Namespace: "testing",
+							Name:      "test",
+						},
 					},
 					Status: sentryv1alpha1.ProjectStatus{
 						Slug: "my-test-project",

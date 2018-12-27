@@ -182,9 +182,14 @@ func (r *reconcilerSet) Project(request reconcile.Request) (reconcile.Result, er
 		}
 	}
 
-	team, err := r.sentry.GetTeam(org, instance.Spec.Team)
+	kubeTeam := &sentryv1alpha1.Team{}
+	if err := r.kube.Get(context.TODO(), client.ObjectKey{Namespace: instance.Spec.TeamRef.Namespace, Name: instance.Spec.TeamRef.Name}, kubeTeam); err != nil {
+		return reconcile.Result{}, errors.Wrap(err, "failed to get team referenced by teamRef")
+	}
+
+	team, err := r.sentry.GetTeam(org, kubeTeam.Status.Slug)
 	if err != nil {
-		return reconcile.Result{}, errors.Wrapf(err, "failed to get team %s/%s", *org.Slug, instance.Spec.Team)
+		return reconcile.Result{}, errors.Wrapf(err, "failed to get team %s/%s", *org.Slug, kubeTeam.Status.Slug)
 	}
 
 	if instance.Status.Slug == "" {
