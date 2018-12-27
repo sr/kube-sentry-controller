@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+// New initializes the Sentry controller and adds it to controller runtime manager.
 func New(mgr manager.Manager, logger logr.Logger, sentry SentryClient, org string) error {
 	r := &reconcilerSet{
 		scheme: mgr.GetScheme(),

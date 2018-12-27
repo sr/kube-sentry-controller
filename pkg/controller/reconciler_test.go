@@ -53,7 +53,7 @@ func TestClientKeyReconciler(t *testing.T) {
 		{
 			name: "object is not found",
 			req: reconcile.Request{
-				client.ObjectKey{Namespace: "not-found", Name: "not-found"},
+				NamespacedName: client.ObjectKey{Namespace: "not-found", Name: "not-found"},
 			},
 			sentry:  &fakeSentryClient{},
 			wantErr: nil,
@@ -62,7 +62,7 @@ func TestClientKeyReconciler(t *testing.T) {
 			name: "errors if organization does not exist",
 			kube: []runtime.Object{sentryClientKey},
 			req: reconcile.Request{
-				client.ObjectKey{Namespace: "testing", Name: "test-key"},
+				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test-key"},
 			},
 			sentry:  &fakeSentryClient{},
 			wantErr: errors.New("failed to get organization"),
@@ -71,7 +71,7 @@ func TestClientKeyReconciler(t *testing.T) {
 			name: "errors if project does not exist",
 			kube: []runtime.Object{sentryClientKey},
 			req: reconcile.Request{
-				client.ObjectKey{Namespace: "testing", Name: "test-key"},
+				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test-key"},
 			},
 			sentry: &fakeSentryClient{
 				orgs: []sentry.Organization{
@@ -97,7 +97,7 @@ func TestClientKeyReconciler(t *testing.T) {
 				},
 			},
 			req: reconcile.Request{
-				client.ObjectKey{Namespace: "testing", Name: "sentry-key-1"},
+				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "sentry-key-1"},
 			},
 			sentry: &fakeSentryClient{
 				orgs: []sentry.Organization{
@@ -170,7 +170,7 @@ func TestClientKeyReconciler(t *testing.T) {
 				},
 			},
 			req: reconcile.Request{
-				client.ObjectKey{Namespace: "testing", Name: "test-key"},
+				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test-key"},
 			},
 			sentry: &fakeSentryClient{
 				orgs: []sentry.Organization{
@@ -231,7 +231,7 @@ func TestClientKeyReconciler(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:         "testing",
 						Name:              "test-key",
-						DeletionTimestamp: &metav1.Time{time.Now()},
+						DeletionTimestamp: &metav1.Time{Time: time.Now()},
 						Finalizers:        []string{finalizerName},
 					},
 					Spec: sentryv1alpha1.ClientKeySpec{
@@ -245,7 +245,7 @@ func TestClientKeyReconciler(t *testing.T) {
 				},
 			},
 			req: reconcile.Request{
-				client.ObjectKey{Namespace: "testing", Name: "test-key"},
+				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test-key"},
 			},
 			sentry: &fakeSentryClient{
 				orgs: []sentry.Organization{
@@ -401,7 +401,7 @@ func TestTeamReconciler(t *testing.T) {
 		{
 			name: "object is not found",
 			req: reconcile.Request{
-				client.ObjectKey{Namespace: "not-found", Name: "not-found"},
+				NamespacedName: client.ObjectKey{Namespace: "not-found", Name: "not-found"},
 			},
 			sentry:  &fakeSentryClient{},
 			wantErr: nil,
@@ -410,7 +410,7 @@ func TestTeamReconciler(t *testing.T) {
 			name: "errors if organization does not exist",
 			kube: []runtime.Object{sentryTeam},
 			req: reconcile.Request{
-				client.ObjectKey{Namespace: "testing", Name: "test"},
+				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test"},
 			},
 			sentry:  &fakeSentryClient{},
 			wantErr: errors.New("failed to get organization"),
@@ -429,7 +429,7 @@ func TestTeamReconciler(t *testing.T) {
 				},
 			},
 			req: reconcile.Request{
-				client.ObjectKey{Namespace: "testing", Name: "test"},
+				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test"},
 			},
 			sentry: &fakeSentryClient{
 				orgs: []sentry.Organization{
@@ -472,7 +472,7 @@ func TestTeamReconciler(t *testing.T) {
 				},
 			},
 			req: reconcile.Request{
-				client.ObjectKey{Namespace: "testing", Name: "team"},
+				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "team"},
 			},
 			sentry: &fakeSentryClient{
 				orgs: []sentry.Organization{
@@ -511,7 +511,7 @@ func TestTeamReconciler(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:         "testing",
 						Name:              "test-team",
-						DeletionTimestamp: &metav1.Time{time.Now()},
+						DeletionTimestamp: &metav1.Time{Time: time.Now()},
 						Finalizers:        []string{finalizerName},
 					},
 					Spec: sentryv1alpha1.TeamSpec{
@@ -523,7 +523,7 @@ func TestTeamReconciler(t *testing.T) {
 				},
 			},
 			req: reconcile.Request{
-				client.ObjectKey{Namespace: "testing", Name: "test-team"},
+				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test-team"},
 			},
 			sentry: &fakeSentryClient{
 				orgs: []sentry.Organization{
@@ -650,7 +650,7 @@ func TestProjectReconciler(t *testing.T) {
 		{
 			name: "object is not found",
 			req: reconcile.Request{
-				client.ObjectKey{Namespace: "not-found", Name: "not-found"},
+				NamespacedName: client.ObjectKey{Namespace: "not-found", Name: "not-found"},
 			},
 			sentry:  &fakeSentryClient{},
 			wantErr: nil,
@@ -659,7 +659,7 @@ func TestProjectReconciler(t *testing.T) {
 			name: "errors if organization does not exist",
 			kube: []runtime.Object{testProject},
 			req: reconcile.Request{
-				client.ObjectKey{Namespace: "testing", Name: "test"},
+				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test"},
 			},
 			sentry:  &fakeSentryClient{},
 			wantErr: errors.New("failed to get organization"),
@@ -682,7 +682,7 @@ func TestProjectReconciler(t *testing.T) {
 				},
 			},
 			req: reconcile.Request{
-				client.ObjectKey{Namespace: "testing", Name: "test"},
+				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test"},
 			},
 			sentry: &fakeSentryClient{
 				orgs: []sentry.Organization{
@@ -723,7 +723,7 @@ func TestProjectReconciler(t *testing.T) {
 				},
 			},
 			req: reconcile.Request{
-				client.ObjectKey{Namespace: "testing", Name: "test"},
+				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test"},
 			},
 			sentry: &fakeSentryClient{
 				orgs: []sentry.Organization{
@@ -764,7 +764,7 @@ func TestProjectReconciler(t *testing.T) {
 				},
 			},
 			req: reconcile.Request{
-				client.ObjectKey{Namespace: "testing", Name: "test"},
+				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test"},
 			},
 			sentry: &fakeSentryClient{
 				orgs: []sentry.Organization{
@@ -830,7 +830,7 @@ func TestProjectReconciler(t *testing.T) {
 				},
 			},
 			req: reconcile.Request{
-				client.ObjectKey{Namespace: "testing", Name: "test"},
+				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test"},
 			},
 			sentry: &fakeSentryClient{
 				orgs: []sentry.Organization{
@@ -879,7 +879,7 @@ func TestProjectReconciler(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:         "testing",
 						Name:              "test",
-						DeletionTimestamp: &metav1.Time{time.Now()},
+						DeletionTimestamp: &metav1.Time{Time: time.Now()},
 						Finalizers:        []string{finalizerName},
 					},
 					Spec: sentryv1alpha1.ProjectSpec{
@@ -896,7 +896,7 @@ func TestProjectReconciler(t *testing.T) {
 				},
 			},
 			req: reconcile.Request{
-				client.ObjectKey{Namespace: "testing", Name: "test"},
+				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test"},
 			},
 			sentry: &fakeSentryClient{
 				orgs: []sentry.Organization{
