@@ -30,11 +30,19 @@ spec:
           properties:
             name:
               type: string
-            project:
-              type: string
+            projectRef:
+              properties:
+                name:
+                  type: string
+                namespace:
+                  type: string
+              required:
+              - namespace
+              - name
+              type: object
           required:
           - name
-          - project
+          - projectRef
           type: object
         status:
           properties:

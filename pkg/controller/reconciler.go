@@ -79,6 +79,7 @@ func (r *reconcilerSet) Team(request reconcile.Request) (reconcile.Result, error
 			return reconcile.Result{}, errors.Wrapf(err, "failed to create team %s", instance.Spec.Name)
 		}
 		instance.Status.Slug = *team.Slug
+
 		return reconcile.Result{}, r.kube.Update(context.TODO(), instance)
 	}
 
@@ -86,9 +87,13 @@ func (r *reconcilerSet) Team(request reconcile.Request) (reconcile.Result, error
 	if err != nil {
 		return reconcile.Result{}, errors.Wrapf(err, "failed to get team %s", instance.Status.Slug)
 	}
-	team.Name = instance.Spec.Name
-	if err := r.sentry.UpdateTeam(org, team); err != nil {
-		return reconcile.Result{}, errors.Wrapf(err, "failed to update team %s", instance.Status.Slug)
+
+	if team.Name != instance.Spec.Name {
+		team.Name = instance.Spec.Name
+
+		if err := r.sentry.UpdateTeam(org, team); err != nil {
+			return reconcile.Result{}, errors.Wrapf(err, "failed to update team %s", instance.Status.Slug)
+		}
 	}
 
 	return reconcile.Result{}, nil
@@ -241,16 +246,21 @@ func (r *reconcilerSet) ClientKey(request reconcile.Request) (reconcile.Result, 
 		}
 	}
 
-	proj, err := r.sentry.GetProject(org, instance.Spec.Project)
+	kubeProj := &sentryv1alpha1.Project{}
+	if err := r.kube.Get(context.TODO(), client.ObjectKey{Namespace: instance.Spec.ProjectRef.Namespace, Name: instance.Spec.ProjectRef.Name}, kubeProj); err != nil {
+		return reconcile.Result{}, errors.Wrap(err, "failed to get project referenced in projectRef")
+	}
+
+	proj, err := r.sentry.GetProject(org, kubeProj.Status.Slug)
 	if err != nil {
-		return reconcile.Result{}, errors.Wrapf(err, "failed to get project %s", instance.Spec.Project)
+		return reconcile.Result{}, errors.Wrapf(err, "failed to get project %s", kubeProj.Status.Slug)
 	}
 
 	var key sentry.Key
 	if instance.Status.ID == "" {
 		key, err = r.sentry.CreateClientKey(org, proj, instance.Spec.Name)
 		if err != nil {
-			return reconcile.Result{}, errors.Wrapf(err, "failed to create client key for project %s", instance.Spec.Project)
+			return reconcile.Result{}, errors.Wrapf(err, "failed to create client key for project %s", *proj.Slug)
 		}
 		instance.Status.ID = key.ID
 		instance.Status.Project = *proj.Slug
@@ -262,7 +272,7 @@ func (r *reconcilerSet) ClientKey(request reconcile.Request) (reconcile.Result, 
 	if key.ID == "" {
 		keys, err := r.sentry.GetClientKeys(org, proj)
 		if err != nil {
-			return reconcile.Result{}, errors.Wrapf(err, "failed to get client keys for %s", instance.Spec.Project)
+			return reconcile.Result{}, errors.Wrapf(err, "failed to get client keys for %s", *proj.Slug)
 		}
 		for _, k := range keys {
 			if k.ID == instance.Status.ID {
