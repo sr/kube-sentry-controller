@@ -762,9 +762,9 @@ func TestProjectReconciler(t *testing.T) {
 				projects: []sentry.Project{
 					{
 						Slug: strP("my-test-project"),
-						Name: "Old Name",
+						Name: "My Name",
 						Team: &sentry.Team{
-							Slug: strP("old-team"),
+							Slug: strP("my-team"),
 						},
 					},
 				},

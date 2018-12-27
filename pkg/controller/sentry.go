@@ -169,7 +169,14 @@ func (s *fakeSentryClient) CreateProject(org sentry.Organization, team sentry.Te
 func (s *fakeSentryClient) UpdateProject(org sentry.Organization, proj sentry.Project) error {
 	for i, p := range s.projects {
 		if p.Slug == proj.Slug {
-			s.projects[i] = proj
+			s.projects[i] = sentry.Project{
+				Slug: proj.Slug,
+				Name: proj.Name,
+				Team: &sentry.Team{
+					Name: p.Team.Name,
+					Slug: p.Team.Slug,
+				},
+			}
 			return nil
 		}
 	}

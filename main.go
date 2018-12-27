@@ -30,7 +30,7 @@ func run() error {
 		apiToken    string
 		apiTimeout  time.Duration
 	}{
-		apiEndpoint: "https://sentry.io/api/0",
+		apiEndpoint: "https://sentry.io/api/0/",
 		apiTimeout:  5 * time.Second,
 	}
 
@@ -50,7 +50,7 @@ func run() error {
 		return fmt.Errorf("required flag missing: api-token")
 	}
 
-	logf.SetLogger(logf.ZapLogger(false))
+	logf.SetLogger(logf.ZapLogger(true))
 	logger := logf.Log.WithName("kube-sentry-controller")
 
 	cfg, err := config.GetConfig()

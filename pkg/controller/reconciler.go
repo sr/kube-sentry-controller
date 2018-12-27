@@ -201,16 +201,21 @@ func (r *reconcilerSet) Project(request reconcile.Request) (reconcile.Result, er
 	if err != nil {
 		return reconcile.Result{}, errors.Wrapf(err, "failed to get project %s", instance.Status.Slug)
 	}
-	proj.Name = instance.Spec.Name
-	if proj.Team == nil {
-		proj.Team = &sentry.Team{}
-	}
-	proj.Team.Slug = &instance.Spec.Team
-	if err := r.sentry.UpdateProject(org, proj); err != nil {
-		return reconcile.Result{}, errors.Wrapf(err, "failed to update project %s", instance.Status.Slug)
-	}
 
 	instance.Status.Team = *proj.Team.Slug
+	instance.Status.Slug = *proj.Slug
+
+	if proj.Name != instance.Spec.Name {
+		// TODO(sr) Updating the team is no longer supported by the Sentry API.
+		// See https://github.com/getsentry/sentry/blob/master/src/sentry/api/endpoints/project_details.py#L296-L302
+		proj.Team = nil
+		proj.Name = instance.Spec.Name
+
+		if err := r.sentry.UpdateProject(org, proj); err != nil {
+			return reconcile.Result{}, errors.Wrapf(err, "failed to update project %s", instance.Status.Slug)
+		}
+	}
+
 	if err := r.kube.Update(context.TODO(), instance); err != nil {
 		return reconcile.Result{}, err
 	}
