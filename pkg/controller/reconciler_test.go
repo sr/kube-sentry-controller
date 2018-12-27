@@ -852,47 +852,6 @@ func TestProjectReconciler(t *testing.T) {
 			wantErr: errors.New("failed to get team referenced"),
 		},
 		{
-			name: "errors if team does not exist",
-			kube: []runtime.Object{
-				&sentryv1alpha1.Team{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "testing",
-						Name:      "test",
-					},
-					Spec: sentryv1alpha1.TeamSpec{
-						Name: "Test Team",
-					},
-					Status: sentryv1alpha1.TeamStatus{
-						Slug: "test-team",
-					},
-				},
-				&sentryv1alpha1.Project{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test",
-						Namespace: "testing",
-					},
-					Spec: sentryv1alpha1.ProjectSpec{
-						Name: "My Test Project",
-						TeamRef: sentryv1alpha1.TeamReference{
-							Namespace: "testing",
-							Name:      "test",
-						},
-					},
-				},
-			},
-			req: reconcile.Request{
-				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test"},
-			},
-			sentry: &fakeSentryClient{
-				orgs: []sentry.Organization{
-					{
-						Slug: strP("my-sentry-org"),
-					},
-				},
-			},
-			wantErr: errors.New("failed to get team my-sentry-org/test-team"),
-		},
-		{
 			name: "creates sentry project",
 			kube: []runtime.Object{
 				&sentryv1alpha1.Project{

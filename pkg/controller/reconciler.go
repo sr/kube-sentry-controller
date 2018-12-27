@@ -116,6 +116,7 @@ func (r *reconcilerSet) Project(request reconcile.Request) (reconcile.Result, er
 
 		if instance.Status.Slug != "" {
 			err := r.sentry.DeleteProject(org, sentry.Project{Slug: &instance.Status.Slug})
+
 			if err != nil && !isNotFound(err) {
 				return reconcile.Result{}, errors.Wrapf(err, "failed to delete project %s/%s", *org.Slug, instance.Status.Slug)
 			}
@@ -136,17 +137,19 @@ func (r *reconcilerSet) Project(request reconcile.Request) (reconcile.Result, er
 	}
 
 	kubeTeam := &sentryv1alpha1.Team{}
-	if err := r.kube.Get(context.TODO(), client.ObjectKey{Namespace: instance.Spec.TeamRef.Namespace, Name: instance.Spec.TeamRef.Name}, kubeTeam); err != nil {
+	if err := r.kube.Get(
+		context.TODO(),
+		client.ObjectKey{
+			Namespace: instance.Spec.TeamRef.Namespace,
+			Name:      instance.Spec.TeamRef.Name,
+		},
+		kubeTeam,
+	); err != nil {
 		return reconcile.Result{}, errors.Wrap(err, "failed to get team referenced by teamRef")
 	}
 
-	team, err := r.sentry.GetTeam(org, kubeTeam.Status.Slug)
-	if err != nil {
-		return reconcile.Result{}, errors.Wrapf(err, "failed to get team %s/%s", *org.Slug, kubeTeam.Status.Slug)
-	}
-
 	if instance.Status.Slug == "" {
-		proj, err := r.sentry.CreateProject(org, team, instance.Spec.Name, nil)
+		proj, err := r.sentry.CreateProject(org, sentry.Team{Slug: &instance.Status.Slug}, instance.Spec.Name, nil)
 		if err != nil {
 			return reconcile.Result{}, errors.Wrapf(err, "failed to create project %s", instance.Spec.Name)
 		}
@@ -159,20 +162,17 @@ func (r *reconcilerSet) Project(request reconcile.Request) (reconcile.Result, er
 		return reconcile.Result{}, errors.Wrapf(err, "failed to get project %s", instance.Status.Slug)
 	}
 
-	instance.Status.Slug = *proj.Slug
-
-	if proj.Name != instance.Spec.Name {
-		// TODO(sr) Updating the team is no longer supported by the Sentry API.
-		// See https://github.com/getsentry/sentry/blob/master/src/sentry/api/endpoints/project_details.py#L296-L302
-		proj.Team = nil
-		proj.Name = instance.Spec.Name
-
-		if err := r.sentry.UpdateProject(org, proj); err != nil {
-			return reconcile.Result{}, errors.Wrapf(err, "failed to update project %s", instance.Status.Slug)
-		}
+	if proj.Name == instance.Spec.Name {
+		return reconcile.Result{}, nil
 	}
 
-	return reconcile.Result{}, r.kube.Update(context.TODO(), instance)
+	// TODO(sr) Updating the team is no longer supported by the Sentry API.
+	// See https://github.com/getsentry/sentry/blob/master/src/sentry/api/endpoints/project_details.py#L296-L302
+	proj.Team = nil
+	proj.Name = instance.Spec.Name
+
+	err = r.sentry.UpdateProject(org, proj)
+	return reconcile.Result{}, errors.Wrapf(err, "failed to update project %s", instance.Status.Slug)
 }
 
 // +kubebuilder:rbac:groups=sentry.sr.github.com,resources=teams,verbs=get;list;watch;create;update;patch;delete
