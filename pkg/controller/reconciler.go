@@ -44,13 +44,7 @@ func (r *reconcilerSet) Team(request reconcile.Request) (reconcile.Result, error
 	}
 
 	if !instance.ObjectMeta.DeletionTimestamp.IsZero() {
-		found := false
-		for _, f := range instance.ObjectMeta.Finalizers {
-			if f == finalizerName {
-				found = true
-			}
-		}
-		if !found {
+		if !hasFinalizer(instance) {
 			return reconcile.Result{}, err
 		}
 
@@ -64,31 +58,19 @@ func (r *reconcilerSet) Team(request reconcile.Request) (reconcile.Result, error
 			}
 		}
 
-		finalizers := []string{}
-		for _, f := range instance.ObjectMeta.Finalizers {
-			if f != finalizerName {
-				finalizers = append(finalizers, f)
-			}
-		}
-		instance.ObjectMeta.Finalizers = finalizers
-
+		removeFinalizer(instance)
 		if err := r.kube.Update(context.TODO(), instance); err != nil {
-			return reconcile.Result{Requeue: true}, errors.Wrap(err, "failed to remove finalizer")
+			return reconcile.Result{}, errors.Wrap(err, "failed to remove finalizer")
 		}
 		return reconcile.Result{}, nil
 	}
 
-	found := false
-	for _, f := range instance.ObjectMeta.Finalizers {
-		if f == finalizerName {
-			found = true
-		}
-	}
-	if !found {
+	if !hasFinalizer(instance) {
 		instance.ObjectMeta.Finalizers = append(instance.ObjectMeta.Finalizers, finalizerName)
-	}
-	if err := r.kube.Update(context.TODO(), instance); err != nil {
-		return reconcile.Result{}, errors.Wrap(err, "failed to add finalizer")
+
+		if err := r.kube.Update(context.TODO(), instance); err != nil {
+			return reconcile.Result{}, errors.Wrap(err, "failed to add finalizer")
+		}
 	}
 
 	if instance.Status.Slug == "" {
@@ -129,13 +111,7 @@ func (r *reconcilerSet) Project(request reconcile.Request) (reconcile.Result, er
 	}
 
 	if !instance.ObjectMeta.DeletionTimestamp.IsZero() {
-		found := false
-		for _, f := range instance.ObjectMeta.Finalizers {
-			if f == finalizerName {
-				found = true
-			}
-		}
-		if !found {
+		if !hasFinalizer(instance) {
 			return reconcile.Result{}, err
 		}
 
@@ -153,14 +129,8 @@ func (r *reconcilerSet) Project(request reconcile.Request) (reconcile.Result, er
 			}
 		}
 
-		finalizers := []string{}
-		for _, f := range instance.ObjectMeta.Finalizers {
-			if f != finalizerName {
-				finalizers = append(finalizers, f)
-			}
-		}
+		removeFinalizer(instance)
 		instance.Status = sentryv1alpha1.ProjectStatus{}
-		instance.ObjectMeta.Finalizers = finalizers
 
 		if err := r.kube.Update(context.TODO(), instance); err != nil {
 			return reconcile.Result{}, errors.Wrap(err, "failed to remove finalizer")
@@ -168,13 +138,7 @@ func (r *reconcilerSet) Project(request reconcile.Request) (reconcile.Result, er
 		return reconcile.Result{}, nil
 	}
 
-	var finalizer bool
-	for _, f := range instance.ObjectMeta.Finalizers {
-		if f == finalizerName {
-			finalizer = true
-		}
-	}
-	if !finalizer {
+	if !hasFinalizer(instance) {
 		instance.ObjectMeta.Finalizers = append(instance.ObjectMeta.Finalizers, finalizerName)
 
 		if err := r.kube.Update(context.TODO(), instance); err != nil {
@@ -246,13 +210,7 @@ func (r *reconcilerSet) ClientKey(request reconcile.Request) (reconcile.Result, 
 	}
 
 	if !instance.ObjectMeta.DeletionTimestamp.IsZero() {
-		found := false
-		for _, f := range instance.ObjectMeta.Finalizers {
-			if f == finalizerName {
-				found = true
-			}
-		}
-		if !found {
+		if !hasFinalizer(instance) {
 			return reconcile.Result{}, nil
 		}
 
@@ -266,13 +224,7 @@ func (r *reconcilerSet) ClientKey(request reconcile.Request) (reconcile.Result, 
 			}
 		}
 
-		finalizers := []string{}
-		for _, f := range instance.ObjectMeta.Finalizers {
-			if f != finalizerName {
-				finalizers = append(finalizers, f)
-			}
-		}
-		instance.ObjectMeta.Finalizers = finalizers
+		removeFinalizer(instance)
 		instance.Status = sentryv1alpha1.ClientKeyStatus{}
 
 		if err := r.kube.Update(context.TODO(), instance); err != nil {
@@ -281,17 +233,12 @@ func (r *reconcilerSet) ClientKey(request reconcile.Request) (reconcile.Result, 
 		return reconcile.Result{}, nil
 	}
 
-	var fin bool
-	for _, f := range instance.ObjectMeta.Finalizers {
-		if f == finalizerName {
-			fin = true
-		}
-	}
-	if !fin {
+	if !hasFinalizer(instance) {
 		instance.ObjectMeta.Finalizers = append(instance.ObjectMeta.Finalizers, finalizerName)
-	}
-	if err := r.kube.Update(context.TODO(), instance); err != nil {
-		return reconcile.Result{}, errors.Wrap(err, "failed to add finalizer")
+
+		if err := r.kube.Update(context.TODO(), instance); err != nil {
+			return reconcile.Result{}, errors.Wrap(err, "failed to add finalizer")
+		}
 	}
 
 	proj, err := r.sentry.GetProject(org, instance.Spec.Project)
@@ -372,4 +319,23 @@ func (r *reconcilerSet) ClientKey(request reconcile.Request) (reconcile.Result, 
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func hasFinalizer(obj metav1.Object) bool {
+	for _, f := range obj.GetFinalizers() {
+		if f == finalizerName {
+			return true
+		}
+	}
+	return false
+}
+
+func removeFinalizer(obj metav1.Object) {
+	var finalizers []string
+	for _, f := range obj.GetFinalizers() {
+		if f != finalizerName {
+			finalizers = append(finalizers, f)
+		}
+	}
+	obj.SetFinalizers(finalizers)
 }

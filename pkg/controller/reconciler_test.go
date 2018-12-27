@@ -3,6 +3,7 @@ package sentrycontroller
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -1003,6 +1004,79 @@ func TestProjectReconciler(t *testing.T) {
 				if !reflect.DeepEqual(got.ObjectMeta.Finalizers, want.ObjectMeta.Finalizers) {
 					t.Errorf("want finalizers %+v, got: %+v", want.ObjectMeta.Finalizers, got.ObjectMeta.Finalizers)
 				}
+			}
+		})
+	}
+}
+
+func TestHasFinalizer(t *testing.T) {
+	for i, tc := range []struct {
+		obj  metav1.Object
+		want bool
+	}{
+		{
+			obj:  &corev1.Pod{},
+			want: false,
+		},
+		{
+			obj: &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+				Finalizers: []string{finalizerName},
+			}},
+			want: true,
+		},
+		{
+			obj: &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+				Finalizers: []string{"foo"},
+			}},
+			want: false,
+		},
+	} {
+		tc := tc
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			t.Parallel()
+			if want, got := tc.want, hasFinalizer(tc.obj); want != got {
+				t.Errorf("want hasFinalizer %+v, got: %+v", want, got)
+			}
+		})
+	}
+}
+
+func TestRemoveFinalizer(t *testing.T) {
+	for i, tc := range []struct {
+		obj  metav1.Object
+		want []string
+	}{
+		{
+			obj:  &corev1.Pod{},
+			want: nil,
+		},
+		{
+			obj: &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+				Finalizers: []string{finalizerName},
+			}},
+			want: nil,
+		},
+		{
+			obj: &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+				Finalizers: []string{finalizerName, "foo"},
+			}},
+			want: []string{"foo"},
+		},
+		{
+			obj: &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+				Finalizers: []string{finalizerName, finalizerName},
+			}},
+			want: nil,
+		},
+	} {
+		tc := tc
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			t.Parallel()
+
+			removeFinalizer(tc.obj)
+
+			if want, got := tc.want, tc.obj.GetFinalizers(); !reflect.DeepEqual(want, got) {
+				t.Errorf("want finalizers %+v, got: %+v", want, got)
 			}
 		})
 	}
