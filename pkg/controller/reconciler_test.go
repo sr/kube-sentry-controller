@@ -951,7 +951,6 @@ func TestProjectReconciler(t *testing.T) {
 				},
 				Status: sentryv1alpha1.ProjectStatus{
 					Slug: "my-test-project",
-					Team: "my-team",
 				},
 			},
 		},
@@ -1025,7 +1024,6 @@ func TestProjectReconciler(t *testing.T) {
 					Finalizers: []string{finalizerName},
 				},
 				Status: sentryv1alpha1.ProjectStatus{
-					Team: "my-team",
 					Slug: "my-test-project",
 				},
 			},
@@ -1049,7 +1047,6 @@ func TestProjectReconciler(t *testing.T) {
 					},
 					Status: sentryv1alpha1.ProjectStatus{
 						Slug: "my-test-project",
-						Team: "my-team",
 					},
 				},
 			},
@@ -1186,9 +1183,6 @@ func TestProjectReconciler(t *testing.T) {
 				}
 				if got.Status.Slug != want.Status.Slug {
 					t.Errorf("want status.slug %q, got: %q", want.Status.Slug, got.Status.Slug)
-				}
-				if got.Status.Team != want.Status.Team {
-					t.Errorf("want status.team %q, got: %q", want.Status.Team, got.Status.Team)
 				}
 				if !reflect.DeepEqual(got.ObjectMeta.Finalizers, want.ObjectMeta.Finalizers) {
 					t.Errorf("want finalizers %+v, got: %+v", want.ObjectMeta.Finalizers, got.ObjectMeta.Finalizers)

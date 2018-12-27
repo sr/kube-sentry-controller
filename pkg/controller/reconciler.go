@@ -151,7 +151,6 @@ func (r *reconcilerSet) Project(request reconcile.Request) (reconcile.Result, er
 			return reconcile.Result{}, errors.Wrapf(err, "failed to create project %s", instance.Spec.Name)
 		}
 		instance.Status.Slug = *proj.Slug
-		instance.Status.Team = *team.Slug
 		return reconcile.Result{}, r.kube.Update(context.TODO(), instance)
 	}
 
@@ -160,7 +159,6 @@ func (r *reconcilerSet) Project(request reconcile.Request) (reconcile.Result, er
 		return reconcile.Result{}, errors.Wrapf(err, "failed to get project %s", instance.Status.Slug)
 	}
 
-	instance.Status.Team = *proj.Team.Slug
 	instance.Status.Slug = *proj.Slug
 
 	if proj.Name != instance.Spec.Name {

@@ -13,7 +13,6 @@ type ProjectSpec struct {
 // ProjectStatus defines the observed state of Project
 type ProjectStatus struct {
 	Slug string `json:"slug"`
-	Team string `json:"team"`
 }
 
 // TeamReference is a reference to a Team object.

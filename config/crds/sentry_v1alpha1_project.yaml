@@ -47,11 +47,8 @@ spec:
           properties:
             slug:
               type: string
-            team:
-              type: string
           required:
           - slug
-          - team
           type: object
   version: v1alpha1
 status:
