@@ -30,17 +30,17 @@ func run() error {
 		org         string
 		apiEndpoint string
 		apiToken    string
-		apiTimeout  time.Duration
+		timeout     time.Duration
 	}{
 		apiEndpoint: "https://sentry.io/api/0/",
-		apiTimeout:  5 * time.Second,
+		timeout:     10 * time.Second,
 	}
 
 	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	fs.StringVar(&opts.org, "organization", opts.org, "Slug of the Sentry organization")
 	fs.StringVar(&opts.apiEndpoint, "api-endpoint", opts.apiEndpoint, "Sentry API endpoint")
 	fs.StringVar(&opts.apiToken, "api-token", "", "Sentry API auth token")
-	fs.DurationVar(&opts.apiTimeout, "api-timeout", opts.apiTimeout, "Sentry API request timeout")
+	fs.DurationVar(&opts.timeout, "timeout", opts.timeout, "Timeout for a single reconcilation attempt")
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		return err
 	}
@@ -86,7 +86,7 @@ func run() error {
 		ep,
 	)
 
-	if err := sentrycontroller.New(mgr, logger, cli, opts.org); err != nil {
+	if err := sentrycontroller.Add(mgr, logger, cli, opts.org, opts.timeout); err != nil {
 		return errors.Wrap(err, "failed to registry sentry controllers with the manager")
 	}
 

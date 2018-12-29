@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"reflect"
+	"time"
 
 	"github.com/pkg/errors"
 	sentryv1alpha1 "github.com/sr/kube-sentry-controller/pkg/apis/sentry/v1alpha1"
@@ -21,15 +22,17 @@ const finalizerName = "sentry.sr.github.com"
 
 // reconcilerSet is a set of reconcile.Reconciler that reconcile Sentry API objects.
 type reconcilerSet struct {
-	scheme *runtime.Scheme
-	kube   client.Client // kubernetes API client
-	sentry sentry.Client // sentry API client
-	org    string        // slug of the sentry organization being managed
+	scheme  *runtime.Scheme
+	kube    client.Client // kubernetes API client
+	sentry  sentry.Client // sentry API client
+	org     string        // slug of the sentry organization being managed
+	timeout time.Duration // timeout for reconcilation attempts
 }
 
 // +kubebuilder:rbac:groups=sentry.sr.github.com,resources=teams,verbs=get;list;watch;create;update;patch;delete
 func (r *reconcilerSet) Team(request reconcile.Request) (reconcile.Result, error) {
-	ctx := context.TODO()
+	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
+	defer cancel()
 
 	instance := &sentryv1alpha1.Team{}
 	err := r.kube.Get(ctx, request.NamespacedName, instance)
@@ -96,7 +99,8 @@ func (r *reconcilerSet) Team(request reconcile.Request) (reconcile.Result, error
 
 // +kubebuilder:rbac:groups=sentry.sr.github.com,resources=sentryprojects,verbs=get;list;watch;create;update;patch;delete
 func (r *reconcilerSet) Project(request reconcile.Request) (reconcile.Result, error) {
-	ctx := context.TODO()
+	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
+	defer cancel()
 
 	instance := &sentryv1alpha1.Project{}
 	err := r.kube.Get(ctx, request.NamespacedName, instance)
@@ -178,7 +182,8 @@ func (r *reconcilerSet) Project(request reconcile.Request) (reconcile.Result, er
 // +kubebuilder:rbac:groups=sentry.sr.github.com,resources=teams,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;patch;delete
 func (r *reconcilerSet) ClientKey(request reconcile.Request) (reconcile.Result, error) {
-	ctx := context.TODO()
+	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
+	defer cancel()
 
 	instance := &sentryv1alpha1.ClientKey{}
 	err := r.kube.Get(ctx, request.NamespacedName, instance)

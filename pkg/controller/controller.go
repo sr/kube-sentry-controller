@@ -1,6 +1,8 @@
 package sentrycontroller
 
 import (
+	"time"
+
 	"github.com/go-logr/logr"
 	sentryv1alpha1 "github.com/sr/kube-sentry-controller/pkg/apis/sentry/v1alpha1"
 	"github.com/sr/kube-sentry-controller/pkg/sentry"
@@ -12,13 +14,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-// New initializes the Sentry controller and adds it to controller runtime manager.
-func New(mgr manager.Manager, logger logr.Logger, sentry sentry.Client, org string) error {
+// Add initializes the sentry controller, sets up watches, and adds it to manager.
+func Add(mgr manager.Manager, logger logr.Logger, sentry sentry.Client, org string, timeout time.Duration) error {
 	r := &reconcilerSet{
-		scheme: mgr.GetScheme(),
-		kube:   mgr.GetClient(),
-		sentry: sentry,
-		org:    org,
+		scheme:  mgr.GetScheme(),
+		kube:    mgr.GetClient(),
+		sentry:  sentry,
+		org:     org,
+		timeout: timeout,
 	}
 
 	c, err := controller.New("sentry-team", mgr, controller.Options{
