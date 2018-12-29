@@ -787,7 +787,7 @@ func TestProjectReconciler(t *testing.T) {
 			Namespace: "testing",
 		},
 		Spec: sentryv1alpha1.ProjectSpec{
-			Name: "My Test Project",
+			Slug: "my-test-project",
 		},
 	}
 
@@ -827,7 +827,7 @@ func TestProjectReconciler(t *testing.T) {
 						Namespace: "testing",
 					},
 					Spec: sentryv1alpha1.ProjectSpec{
-						Name: "My Test Project",
+						Slug: "my-test-project",
 						TeamRef: sentryv1alpha1.TeamReference{
 							Namespace: "testing",
 							Name:      "team-not-found",
@@ -856,7 +856,7 @@ func TestProjectReconciler(t *testing.T) {
 						Namespace: "testing",
 					},
 					Spec: sentryv1alpha1.ProjectSpec{
-						Name: "My Test Project",
+						Slug: "my-test-project",
 						TeamRef: sentryv1alpha1.TeamReference{
 							Namespace: "testing",
 							Name:      "test",
@@ -888,74 +888,6 @@ func TestProjectReconciler(t *testing.T) {
 				Teams: []*sentry.Team{
 					{
 						Slug: "my-team",
-					},
-				},
-			},
-			wantProjects: []*sentry.Project{
-				{
-					Slug: "my-test-project",
-					Name: "My Test Project",
-				},
-			},
-			wantKubeProject: &sentryv1alpha1.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Finalizers: []string{finalizerName},
-				},
-				Status: sentryv1alpha1.ProjectStatus{
-					Slug: "my-test-project",
-				},
-			},
-		},
-		{
-			name: "updates sentry project name",
-			kube: []runtime.Object{
-				&sentryv1alpha1.Project{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "testing",
-						Name:      "test",
-					},
-					Spec: sentryv1alpha1.ProjectSpec{
-						Name: "My Test Project",
-						TeamRef: sentryv1alpha1.TeamReference{
-							Namespace: "testing",
-							Name:      "test",
-						},
-					},
-					Status: sentryv1alpha1.ProjectStatus{
-						Slug: "my-test-project",
-					},
-				},
-				&sentryv1alpha1.Team{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test",
-						Namespace: "testing",
-					},
-					Spec: sentryv1alpha1.TeamSpec{
-						Name: "My Team",
-					},
-					Status: sentryv1alpha1.TeamStatus{
-						Slug: "my-team",
-					},
-				},
-			},
-			req: reconcile.Request{
-				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test"},
-			},
-			sentry: &sentry.Fake{
-				Orgs: []*sentry.Organization{
-					{
-						Slug: "my-sentry-org",
-					},
-				},
-				Teams: []*sentry.Team{
-					{
-						Slug: "my-team",
-					},
-				},
-				Projects: []*sentry.Project{
-					{
-						Slug: "my-test-project",
-						Name: "My Name",
 					},
 				},
 			},
@@ -983,7 +915,6 @@ func TestProjectReconciler(t *testing.T) {
 						Name:      "test",
 					},
 					Spec: sentryv1alpha1.ProjectSpec{
-						Name: "My Test Project",
 						Slug: "new-slug",
 						TeamRef: sentryv1alpha1.TeamReference{
 							Namespace: "testing",
@@ -1054,7 +985,7 @@ func TestProjectReconciler(t *testing.T) {
 						Finalizers:        []string{finalizerName},
 					},
 					Spec: sentryv1alpha1.ProjectSpec{
-						Name: "My Test Project",
+						Slug: "my-test-project",
 						TeamRef: sentryv1alpha1.TeamReference{
 							Namespace: "testing",
 							Name:      "test",
@@ -1169,9 +1100,6 @@ func TestProjectReconciler(t *testing.T) {
 			for i, want := range tc.wantProjects {
 				got := tc.sentry.Projects[i]
 
-				if want.Name != got.Name {
-					t.Fatalf("want project #%d name %q, got: %q", i, want.Name, got.Name)
-				}
 				if want.Slug != got.Slug {
 					t.Fatalf("want project #%d slug %q, got: %q", i, want.Slug, got.Slug)
 				}

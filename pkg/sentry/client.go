@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 )
@@ -55,16 +56,16 @@ type ClientKeyDSN struct {
 }
 
 type ErrorResponse struct {
-	Response *http.Response `json:"-"`
-	Detail   string         `json:"detail"`
+	Response *http.Response
+	Body     []byte
 }
 
 func (e *ErrorResponse) Error() string {
-	return fmt.Sprintf("%v %v: %d %+v",
+	return fmt.Sprintf("%v %v: %d %s",
 		e.Response.Request.Method,
 		e.Response.Request.URL,
 		e.Response.StatusCode,
-		e.Detail,
+		string(e.Body),
 	)
 }
 
@@ -164,7 +165,7 @@ func (c *httpClient) CreateProject(ctx context.Context, org, team, name, slug st
 	req, err := c.newRequest(
 		http.MethodPost,
 		fmt.Sprintf("teams/%s/%s/projects/", org, team),
-		Team{Name: name, Slug: slug},
+		Project{Slug: slug},
 	)
 	if err != nil {
 		return nil, nil, err
@@ -269,9 +270,8 @@ func (c *httpClient) do(ctx context.Context, req *http.Request, v interface{}) (
 	if !(resp.StatusCode == http.StatusOK ||
 		resp.StatusCode == http.StatusCreated ||
 		resp.StatusCode == http.StatusNoContent) {
-		errResp := &ErrorResponse{Response: resp}
-		_ = json.NewDecoder(resp.Body).Decode(errResp)
-		return resp, errResp
+		s, _ := ioutil.ReadAll(resp.Body)
+		return resp, &ErrorResponse{Response: resp, Body: s}
 	}
 
 	if v != nil {

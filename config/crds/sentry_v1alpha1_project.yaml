@@ -28,8 +28,6 @@ spec:
           type: object
         spec:
           properties:
-            name:
-              type: string
             slug:
               type: string
             teamRef:
@@ -43,7 +41,8 @@ spec:
               - name
               type: object
           required:
-          - name
+          - slug
+          - teamRef
           type: object
         status:
           properties:

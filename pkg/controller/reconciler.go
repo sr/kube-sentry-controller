@@ -156,9 +156,9 @@ func (r *reconcilerSet) Project(request reconcile.Request) (reconcile.Result, er
 	}
 
 	if instance.Status.Slug == "" {
-		proj, _, err := r.sentry.CreateProject(ctx, org.Slug, kubeTeam.Status.Slug, instance.Spec.Name, "")
+		proj, _, err := r.sentry.CreateProject(ctx, org.Slug, kubeTeam.Status.Slug, instance.Spec.Slug, instance.Spec.Slug)
 		if err != nil {
-			return reconcile.Result{}, errors.Wrapf(err, "failed to create project %s", instance.Spec.Name)
+			return reconcile.Result{}, errors.Wrapf(err, "failed to create project %s", instance.Spec.Slug)
 		}
 		instance.Status.Slug = proj.Slug
 		return reconcile.Result{}, r.kube.Update(ctx, instance)
@@ -169,11 +169,11 @@ func (r *reconcilerSet) Project(request reconcile.Request) (reconcile.Result, er
 		return reconcile.Result{}, errors.Wrapf(err, "failed to get project %s", instance.Status.Slug)
 	}
 
-	if proj.Name == instance.Spec.Name && proj.Slug == instance.Spec.Slug {
+	if proj.Slug == instance.Spec.Slug {
 		return reconcile.Result{}, nil
 	}
 
-	proj, _, err = r.sentry.UpdateProject(ctx, org.Slug, proj.Slug, instance.Spec.Name, instance.Spec.Slug)
+	proj, _, err = r.sentry.UpdateProject(ctx, org.Slug, proj.Slug, instance.Spec.Slug, instance.Spec.Slug)
 	if err != nil {
 		return reconcile.Result{}, errors.Wrapf(err, "failed to update project %s", instance.Status.Slug)
 	}

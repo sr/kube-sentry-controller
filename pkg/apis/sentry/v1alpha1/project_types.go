@@ -6,8 +6,7 @@ import (
 
 // ProjectSpec defines the desired state of Project
 type ProjectSpec struct {
-	Name    string        `json:"name,omitempty"`
-	Slug    string        `json:"slug,omitempty"`
+	Slug    string        `json:"slug"`
 	TeamRef TeamReference `json:"teamRef"`
 }
 
