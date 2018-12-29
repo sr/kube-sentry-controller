@@ -3,13 +3,15 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
+	"net/url"
 	"os"
 	"time"
 
-	sentry "github.com/atlassian/go-sentry-api"
 	"github.com/pkg/errors"
 	"github.com/sr/kube-sentry-controller/pkg/apis"
 	"github.com/sr/kube-sentry-controller/pkg/controller"
+	"github.com/sr/kube-sentry-controller/pkg/sentry"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -49,6 +51,13 @@ func run() error {
 	if opts.apiToken == "" {
 		return fmt.Errorf("required flag missing: api-token")
 	}
+	if opts.apiEndpoint == "" {
+		return fmt.Errorf("required flag missing: api-endpoint")
+	}
+	ep, err := url.Parse(opts.apiEndpoint)
+	if err != nil {
+		return err
+	}
 
 	logf.SetLogger(logf.ZapLogger(true))
 	logger := logf.Log.WithName("kube-sentry-controller")
@@ -67,12 +76,17 @@ func run() error {
 		return errors.Wrap(err, "failed to add APIs to scheme")
 	}
 
-	sentry, err := sentry.NewClient(opts.apiToken, &opts.apiEndpoint, nil)
-	if err != nil {
-		return errors.Wrap(err, "failed to set up sentry client")
-	}
+	cli := sentry.New(
+		&http.Client{
+			Transport: &tokenTransport{
+				transport: http.DefaultTransport,
+				token:     opts.apiToken,
+			},
+		},
+		ep,
+	)
 
-	if err := sentrycontroller.New(mgr, logger, sentry, opts.org); err != nil {
+	if err := sentrycontroller.New(mgr, logger, cli, opts.org); err != nil {
 		return errors.Wrap(err, "failed to registry sentry controllers with the manager")
 	}
 
@@ -82,4 +96,14 @@ func run() error {
 	}
 	logger.Info("exiting...")
 	return nil
+}
+
+type tokenTransport struct {
+	transport http.RoundTripper
+	token     string
+}
+
+func (t *tokenTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", t.token))
+	return t.transport.RoundTrip(req)
 }

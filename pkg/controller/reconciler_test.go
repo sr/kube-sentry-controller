@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	sentry "github.com/atlassian/go-sentry-api"
 	sentryv1alpha1 "github.com/sr/kube-sentry-controller/pkg/apis/sentry/v1alpha1"
+	sentry "github.com/sr/kube-sentry-controller/pkg/sentry"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -19,10 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
-
-func strP(s string) *string {
-	return &s
-}
 
 func TestClientKeyReconciler(t *testing.T) {
 	if err := sentryv1alpha1.AddToScheme(scheme.Scheme); err != nil {
@@ -46,11 +42,11 @@ func TestClientKeyReconciler(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
 		kube   []runtime.Object
-		sentry *fakeSentryClient
+		sentry *sentry.Fake
 		req    reconcile.Request
 
 		wantErr           error
-		wantClientKeys    []sentry.Key
+		wantClientKeys    []*sentry.ClientKey
 		wantKubeClientKey *sentryv1alpha1.ClientKey
 		wantKubeSecrets   []*corev1.Secret
 	}{
@@ -59,7 +55,7 @@ func TestClientKeyReconciler(t *testing.T) {
 			req: reconcile.Request{
 				NamespacedName: client.ObjectKey{Namespace: "not-found", Name: "not-found"},
 			},
-			sentry:  &fakeSentryClient{},
+			sentry:  &sentry.Fake{},
 			wantErr: nil,
 		},
 		{
@@ -68,7 +64,7 @@ func TestClientKeyReconciler(t *testing.T) {
 			req: reconcile.Request{
 				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test-key"},
 			},
-			sentry:  &fakeSentryClient{},
+			sentry:  &sentry.Fake{},
 			wantErr: errors.New("failed to get organization"),
 		},
 		{
@@ -88,10 +84,10 @@ func TestClientKeyReconciler(t *testing.T) {
 					},
 				},
 			},
-			sentry: &fakeSentryClient{
-				orgs: []sentry.Organization{
+			sentry: &sentry.Fake{
+				Orgs: []*sentry.Organization{
 					{
-						Slug: strP("my-sentry-org"),
+						Slug: "my-sentry-org",
 					},
 				},
 			},
@@ -129,14 +125,14 @@ func TestClientKeyReconciler(t *testing.T) {
 			req: reconcile.Request{
 				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test-key"},
 			},
-			sentry: &fakeSentryClient{
-				orgs: []sentry.Organization{
+			sentry: &sentry.Fake{
+				Orgs: []*sentry.Organization{
 					{
-						Slug: strP("my-sentry-org"),
+						Slug: "my-sentry-org",
 					},
 				},
 			},
-			wantErr: errors.New("failed to get project"),
+			wantErr: errors.New("failed to create client key for project"),
 		},
 		{
 			name: "creates sentry client key and secret",
@@ -167,22 +163,22 @@ func TestClientKeyReconciler(t *testing.T) {
 			req: reconcile.Request{
 				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "sentry-key-1"},
 			},
-			sentry: &fakeSentryClient{
-				orgs: []sentry.Organization{
+			sentry: &sentry.Fake{
+				Orgs: []*sentry.Organization{
 					{
-						Slug: strP("my-sentry-org"),
+						Slug: "my-sentry-org",
 					},
 				},
-				projects: []sentry.Project{
+				Projects: []*sentry.Project{
 					{
-						Slug: strP("my-project"),
+						Slug: "my-project",
 					},
 				},
 			},
-			wantClientKeys: []sentry.Key{
+			wantClientKeys: []*sentry.ClientKey{
 				{
-					ID:    "1",
-					Label: "My Key",
+					ID:   "1",
+					Name: "My Key",
 				},
 			},
 			wantKubeClientKey: &sentryv1alpha1.ClientKey{
@@ -252,22 +248,22 @@ func TestClientKeyReconciler(t *testing.T) {
 			req: reconcile.Request{
 				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test-key"},
 			},
-			sentry: &fakeSentryClient{
-				orgs: []sentry.Organization{
+			sentry: &sentry.Fake{
+				Orgs: []*sentry.Organization{
 					{
-						Slug: strP("my-sentry-org"),
+						Slug: "my-sentry-org",
 					},
 				},
-				projects: []sentry.Project{
+				Projects: []*sentry.Project{
 					{
-						Slug: strP("my-project"),
+						Slug: "my-project",
 					},
 				},
-				keys: []sentry.Key{
+				ClientKeys: []*sentry.ClientKey{
 					{
-						ID:    "1",
-						Label: "old key name",
-						DSN: sentry.DSN{
+						ID:   "1",
+						Name: "old key name",
+						DSN: &sentry.ClientKeyDSN{
 							Public: "new public",
 							CSP:    "new csp",
 							Secret: "new secret",
@@ -275,10 +271,10 @@ func TestClientKeyReconciler(t *testing.T) {
 					},
 				},
 			},
-			wantClientKeys: []sentry.Key{
+			wantClientKeys: []*sentry.ClientKey{
 				{
-					ID:    "1",
-					Label: "new key name",
+					ID:   "1",
+					Name: "new key name",
 				},
 			},
 			wantKubeClientKey: &sentryv1alpha1.ClientKey{
@@ -330,31 +326,31 @@ func TestClientKeyReconciler(t *testing.T) {
 			req: reconcile.Request{
 				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test-key"},
 			},
-			sentry: &fakeSentryClient{
-				orgs: []sentry.Organization{
+			sentry: &sentry.Fake{
+				Orgs: []*sentry.Organization{
 					{
-						Slug: strP("my-sentry-org"),
+						Slug: "my-sentry-org",
 					},
 				},
-				projects: []sentry.Project{
+				Projects: []*sentry.Project{
 					{
-						Slug: strP("my-project"),
+						Slug: "my-project",
 					},
 				},
-				keys: []sentry.Key{
+				ClientKeys: []*sentry.ClientKey{
 					{
-						ID:    "1",
-						Label: "key name",
-						DSN: sentry.DSN{
+						ID:   "1",
+						Name: "key name",
+						DSN: &sentry.ClientKeyDSN{
 							Public: "public",
 							CSP:    "csp",
 							Secret: "secret",
 						},
 					},
 					{
-						ID:    "2",
-						Label: "some other key",
-						DSN: sentry.DSN{
+						ID:   "2",
+						Name: "some other key",
+						DSN: &sentry.ClientKeyDSN{
 							Public: "public",
 							CSP:    "csp",
 							Secret: "secret",
@@ -362,10 +358,10 @@ func TestClientKeyReconciler(t *testing.T) {
 					},
 				},
 			},
-			wantClientKeys: []sentry.Key{
+			wantClientKeys: []*sentry.ClientKey{
 				{
-					ID:    "2",
-					Label: "some other key",
+					ID:   "2",
+					Name: "some other key",
 				},
 			},
 			wantKubeClientKey: &sentryv1alpha1.ClientKey{
@@ -400,14 +396,14 @@ func TestClientKeyReconciler(t *testing.T) {
 			req: reconcile.Request{
 				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test-key"},
 			},
-			sentry: &fakeSentryClient{
-				orgs: []sentry.Organization{
+			sentry: &sentry.Fake{
+				Orgs: []*sentry.Organization{
 					{
-						Slug: strP("my-sentry-org"),
+						Slug: "my-sentry-org",
 					},
 				},
 			},
-			wantClientKeys: []sentry.Key{},
+			wantClientKeys: []*sentry.ClientKey{},
 			wantKubeClientKey: &sentryv1alpha1.ClientKey{
 				ObjectMeta: metav1.ObjectMeta{
 					Finalizers: nil,
@@ -441,19 +437,19 @@ func TestClientKeyReconciler(t *testing.T) {
 				}
 			}
 
-			if want, got := len(tc.wantClientKeys), len(tc.sentry.keys); want != got {
+			if want, got := len(tc.wantClientKeys), len(tc.sentry.ClientKeys); want != got {
 				t.Fatalf("want %d key(s) on sentry, got: %d", want, got)
 			}
 
 			for i, want := range tc.wantClientKeys {
-				got := tc.sentry.keys[i]
+				got := tc.sentry.ClientKeys[i]
 
 				if want.ID != got.ID {
 					t.Fatalf("want client key #%d id %q, got: %q", i, want.ID, got.ID)
 				}
 
-				if want.Label != got.Label {
-					t.Fatalf("want client key #%d label %q, got: %q", i, want.Label, got.Label)
+				if want.Name != got.Name {
+					t.Fatalf("want client key #%d label %q, got: %q", i, want.Name, got.Name)
 				}
 			}
 
@@ -514,11 +510,11 @@ func TestTeamReconciler(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
 		kube   []runtime.Object
-		sentry *fakeSentryClient
+		sentry *sentry.Fake
 		req    reconcile.Request
 
 		wantErr         error
-		wantSentryTeams []sentry.Team
+		wantSentryTeams []*sentry.Team
 		wantKubeTeam    *sentryv1alpha1.Team
 	}{
 		{
@@ -526,7 +522,7 @@ func TestTeamReconciler(t *testing.T) {
 			req: reconcile.Request{
 				NamespacedName: client.ObjectKey{Namespace: "not-found", Name: "not-found"},
 			},
-			sentry:  &fakeSentryClient{},
+			sentry:  &sentry.Fake{},
 			wantErr: nil,
 		},
 		{
@@ -535,7 +531,7 @@ func TestTeamReconciler(t *testing.T) {
 			req: reconcile.Request{
 				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test"},
 			},
-			sentry:  &fakeSentryClient{},
+			sentry:  &sentry.Fake{},
 			wantErr: errors.New("failed to get organization"),
 		},
 		{
@@ -554,16 +550,16 @@ func TestTeamReconciler(t *testing.T) {
 			req: reconcile.Request{
 				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test"},
 			},
-			sentry: &fakeSentryClient{
-				orgs: []sentry.Organization{
+			sentry: &sentry.Fake{
+				Orgs: []*sentry.Organization{
 					{
-						Slug: strP("my-sentry-org"),
+						Slug: "my-sentry-org",
 					},
 				},
 			},
-			wantSentryTeams: []sentry.Team{
+			wantSentryTeams: []*sentry.Team{
 				{
-					Slug: strP("test-team"),
+					Slug: "test-team",
 					Name: "Test Team",
 				},
 			},
@@ -597,22 +593,22 @@ func TestTeamReconciler(t *testing.T) {
 			req: reconcile.Request{
 				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "team"},
 			},
-			sentry: &fakeSentryClient{
-				orgs: []sentry.Organization{
+			sentry: &sentry.Fake{
+				Orgs: []*sentry.Organization{
 					{
-						Slug: strP("my-sentry-org"),
+						Slug: "my-sentry-org",
 					},
 				},
-				teams: []sentry.Team{
+				Teams: []*sentry.Team{
 					{
-						Slug: strP("test-team"),
+						Slug: "test-team",
 						Name: "Old Team Name",
 					},
 				},
 			},
-			wantSentryTeams: []sentry.Team{
+			wantSentryTeams: []*sentry.Team{
 				{
-					Slug: strP("test-team"),
+					Slug: "test-team",
 					Name: "New Team Name",
 				},
 			},
@@ -648,26 +644,26 @@ func TestTeamReconciler(t *testing.T) {
 			req: reconcile.Request{
 				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test-team"},
 			},
-			sentry: &fakeSentryClient{
-				orgs: []sentry.Organization{
+			sentry: &sentry.Fake{
+				Orgs: []*sentry.Organization{
 					{
-						Slug: strP("my-sentry-org"),
+						Slug: "my-sentry-org",
 					},
 				},
-				teams: []sentry.Team{
+				Teams: []*sentry.Team{
 					{
-						Slug: strP("test-team"),
+						Slug: "test-team",
 						Name: "Test Team",
 					},
 					{
-						Slug: strP("other-team"),
+						Slug: "other-team",
 						Name: "Other Team",
 					},
 				},
 			},
-			wantSentryTeams: []sentry.Team{
+			wantSentryTeams: []*sentry.Team{
 				{
-					Slug: strP("other-team"),
+					Slug: "other-team",
 					Name: "Other Team",
 				},
 			},
@@ -701,14 +697,14 @@ func TestTeamReconciler(t *testing.T) {
 			req: reconcile.Request{
 				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test-team"},
 			},
-			sentry: &fakeSentryClient{
-				orgs: []sentry.Organization{
+			sentry: &sentry.Fake{
+				Orgs: []*sentry.Organization{
 					{
-						Slug: strP("my-sentry-org"),
+						Slug: "my-sentry-org",
 					},
 				},
 			},
-			wantSentryTeams: []sentry.Team{},
+			wantSentryTeams: []*sentry.Team{},
 			wantKubeTeam: &sentryv1alpha1.Team{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace:  "testing",
@@ -744,18 +740,18 @@ func TestTeamReconciler(t *testing.T) {
 				}
 			}
 
-			if want, got := len(tc.wantSentryTeams), len(tc.sentry.teams); want != got {
-				t.Fatalf("want %d teams on sentry, got: %d", want, got)
+			if want, got := len(tc.wantSentryTeams), len(tc.sentry.Teams); want != got {
+				t.Fatalf("want %d team(s) on sentry, got: %d", want, got)
 			}
 
 			for i, want := range tc.wantSentryTeams {
-				got := tc.sentry.teams[i]
+				got := tc.sentry.Teams[i]
 
 				if want.Name != got.Name {
 					t.Fatalf("want team #%d name %q, got: %q", i, want.Name, got.Name)
 				}
-				if *want.Slug != *got.Slug {
-					t.Fatalf("want team #%d slug %q, got: %q", i, *want.Slug, *got.Slug)
+				if want.Slug != got.Slug {
+					t.Fatalf("want team #%d slug %q, got: %q", i, want.Slug, got.Slug)
 				}
 			}
 
@@ -798,11 +794,11 @@ func TestProjectReconciler(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
 		kube   []runtime.Object
-		sentry *fakeSentryClient
+		sentry *sentry.Fake
 		req    reconcile.Request
 
 		wantErr         error
-		wantProjects    []sentry.Project
+		wantProjects    []*sentry.Project
 		wantKubeProject *sentryv1alpha1.Project
 	}{
 		{
@@ -810,7 +806,7 @@ func TestProjectReconciler(t *testing.T) {
 			req: reconcile.Request{
 				NamespacedName: client.ObjectKey{Namespace: "not-found", Name: "not-found"},
 			},
-			sentry:  &fakeSentryClient{},
+			sentry:  &sentry.Fake{},
 			wantErr: nil,
 		},
 		{
@@ -819,7 +815,7 @@ func TestProjectReconciler(t *testing.T) {
 			req: reconcile.Request{
 				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test"},
 			},
-			sentry:  &fakeSentryClient{},
+			sentry:  &sentry.Fake{},
 			wantErr: errors.New("failed to get organization"),
 		},
 		{
@@ -842,10 +838,10 @@ func TestProjectReconciler(t *testing.T) {
 			req: reconcile.Request{
 				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test"},
 			},
-			sentry: &fakeSentryClient{
-				orgs: []sentry.Organization{
+			sentry: &sentry.Fake{
+				Orgs: []*sentry.Organization{
 					{
-						Slug: strP("my-sentry-org"),
+						Slug: "my-sentry-org",
 					},
 				},
 			},
@@ -883,25 +879,22 @@ func TestProjectReconciler(t *testing.T) {
 			req: reconcile.Request{
 				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test"},
 			},
-			sentry: &fakeSentryClient{
-				orgs: []sentry.Organization{
+			sentry: &sentry.Fake{
+				Orgs: []*sentry.Organization{
 					{
-						Slug: strP("my-sentry-org"),
+						Slug: "my-sentry-org",
 					},
 				},
-				teams: []sentry.Team{
+				Teams: []*sentry.Team{
 					{
-						Slug: strP("my-team"),
+						Slug: "my-team",
 					},
 				},
 			},
-			wantProjects: []sentry.Project{
+			wantProjects: []*sentry.Project{
 				{
-					Slug: strP("my-test-project"),
+					Slug: "my-test-project",
 					Name: "My Test Project",
-					Team: &sentry.Team{
-						Slug: strP("my-team"),
-					},
 				},
 			},
 			wantKubeProject: &sentryv1alpha1.Project{
@@ -938,7 +931,7 @@ func TestProjectReconciler(t *testing.T) {
 						Namespace: "testing",
 					},
 					Spec: sentryv1alpha1.TeamSpec{
-						Name: "My Test Project",
+						Name: "My Team",
 					},
 					Status: sentryv1alpha1.TeamStatus{
 						Slug: "my-team",
@@ -948,34 +941,28 @@ func TestProjectReconciler(t *testing.T) {
 			req: reconcile.Request{
 				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test"},
 			},
-			sentry: &fakeSentryClient{
-				orgs: []sentry.Organization{
+			sentry: &sentry.Fake{
+				Orgs: []*sentry.Organization{
 					{
-						Slug: strP("my-sentry-org"),
+						Slug: "my-sentry-org",
 					},
 				},
-				teams: []sentry.Team{
+				Teams: []*sentry.Team{
 					{
-						Slug: strP("my-team"),
+						Slug: "my-team",
 					},
 				},
-				projects: []sentry.Project{
+				Projects: []*sentry.Project{
 					{
-						Slug: strP("my-test-project"),
+						Slug: "my-test-project",
 						Name: "My Name",
-						Team: &sentry.Team{
-							Slug: strP("my-team"),
-						},
 					},
 				},
 			},
-			wantProjects: []sentry.Project{
+			wantProjects: []*sentry.Project{
 				{
-					Slug: strP("my-test-project"),
+					Slug: "my-test-project",
 					Name: "My Test Project",
-					Team: &sentry.Team{
-						Slug: strP("my-team"),
-					},
 				},
 			},
 			wantKubeProject: &sentryv1alpha1.Project{
@@ -1012,41 +999,32 @@ func TestProjectReconciler(t *testing.T) {
 			req: reconcile.Request{
 				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test"},
 			},
-			sentry: &fakeSentryClient{
-				orgs: []sentry.Organization{
+			sentry: &sentry.Fake{
+				Orgs: []*sentry.Organization{
 					{
-						Slug: strP("my-sentry-org"),
+						Slug: "my-sentry-org",
 					},
 				},
-				teams: []sentry.Team{
+				Teams: []*sentry.Team{
 					{
-						Slug: strP("my-team"),
+						Slug: "my-team",
 					},
 				},
-				projects: []sentry.Project{
+				Projects: []*sentry.Project{
 					{
-						Slug: strP("other-project"),
+						Slug: "other-project",
 						Name: "Other Project",
-						Team: &sentry.Team{
-							Slug: strP("my-team"),
-						},
 					},
 					{
-						Slug: strP("my-test-project"),
+						Slug: "my-test-project",
 						Name: "My Team",
-						Team: &sentry.Team{
-							Slug: strP("my-team"),
-						},
 					},
 				},
 			},
-			wantProjects: []sentry.Project{
+			wantProjects: []*sentry.Project{
 				{
-					Slug: strP("other-project"),
+					Slug: "other-project",
 					Name: "Other Project",
-					Team: &sentry.Team{
-						Slug: strP("my-team"),
-					},
 				},
 			},
 			wantKubeProject: &sentryv1alpha1.Project{
@@ -1074,14 +1052,14 @@ func TestProjectReconciler(t *testing.T) {
 			req: reconcile.Request{
 				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test"},
 			},
-			sentry: &fakeSentryClient{
-				orgs: []sentry.Organization{
+			sentry: &sentry.Fake{
+				Orgs: []*sentry.Organization{
 					{
-						Slug: strP("my-sentry-org"),
+						Slug: "my-sentry-org",
 					},
 				},
 			},
-			wantProjects: []sentry.Project{},
+			wantProjects: []*sentry.Project{},
 			wantKubeProject: &sentryv1alpha1.Project{
 				ObjectMeta: metav1.ObjectMeta{
 					Finalizers: nil,
@@ -1115,18 +1093,18 @@ func TestProjectReconciler(t *testing.T) {
 				}
 			}
 
-			if want, got := len(tc.wantProjects), len(tc.sentry.projects); want != got {
+			if want, got := len(tc.wantProjects), len(tc.sentry.Projects); want != got {
 				t.Fatalf("want %d project(s) on sentry, got: %d", want, got)
 			}
 
 			for i, want := range tc.wantProjects {
-				got := tc.sentry.projects[i]
+				got := tc.sentry.Projects[i]
 
 				if want.Name != got.Name {
 					t.Fatalf("want project #%d name %q, got: %q", i, want.Name, got.Name)
 				}
-				if *want.Slug != *got.Slug {
-					t.Fatalf("want project #%d slug %q, got: %q", i, *want.Slug, *got.Slug)
+				if want.Slug != got.Slug {
+					t.Fatalf("want project #%d slug %q, got: %q", i, want.Slug, got.Slug)
 				}
 			}
 

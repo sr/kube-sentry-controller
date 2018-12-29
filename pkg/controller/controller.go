@@ -3,6 +3,7 @@ package sentrycontroller
 import (
 	"github.com/go-logr/logr"
 	sentryv1alpha1 "github.com/sr/kube-sentry-controller/pkg/apis/sentry/v1alpha1"
+	"github.com/sr/kube-sentry-controller/pkg/sentry"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -12,7 +13,7 @@ import (
 )
 
 // New initializes the Sentry controller and adds it to controller runtime manager.
-func New(mgr manager.Manager, logger logr.Logger, sentry SentryClient, org string) error {
+func New(mgr manager.Manager, logger logr.Logger, sentry sentry.Client, org string) error {
 	r := &reconcilerSet{
 		scheme: mgr.GetScheme(),
 		kube:   mgr.GetClient(),

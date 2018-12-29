@@ -3,17 +3,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:ea8e62481140fae8cdbe7849136e1e35565d7b8a99b57f4497f419d448795f54"
-  name = "github.com/atlassian/go-sentry-api"
-  packages = [
-    ".",
-    "datatype",
-  ]
-  pruneopts = "NUT"
-  revision = "f430f21ba0d5192813eb7cf6fb5e0480875a23d5"
-
-[[projects]]
-  branch = "master"
   digest = "1:707ebe952a8b3d00b343c01536c79c73771d100f63ec6babeaed5c79e2b8a8dd"
   name = "github.com/beorn7/perks"
   packages = ["quantile"]
@@ -804,7 +793,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/atlassian/go-sentry-api",
     "github.com/go-logr/logr",
     "github.com/pkg/errors",
     "k8s.io/api/core/v1",
