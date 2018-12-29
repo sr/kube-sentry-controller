@@ -169,14 +169,16 @@ func (r *reconcilerSet) Project(request reconcile.Request) (reconcile.Result, er
 		return reconcile.Result{}, errors.Wrapf(err, "failed to get project %s", instance.Status.Slug)
 	}
 
-	if proj.Name == instance.Spec.Name {
+	if proj.Name == instance.Spec.Name && proj.Slug == instance.Spec.Slug {
 		return reconcile.Result{}, nil
 	}
 
-	if _, err := r.sentry.UpdateProjectName(ctx, org.Slug, proj.Slug, instance.Spec.Name); err != nil {
+	proj, _, err = r.sentry.UpdateProject(ctx, org.Slug, proj.Slug, instance.Spec.Name, instance.Spec.Slug)
+	if err != nil {
 		return reconcile.Result{}, errors.Wrapf(err, "failed to update project %s", instance.Status.Slug)
 	}
-	return reconcile.Result{}, nil
+	instance.Status.Slug = proj.Slug
+	return reconcile.Result{}, r.kube.Update(ctx, instance)
 }
 
 // +kubebuilder:rbac:groups=sentry.sr.github.com,resources=teams,verbs=get;list;watch;create;update;patch;delete

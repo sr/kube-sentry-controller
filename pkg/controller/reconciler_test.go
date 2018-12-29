@@ -907,7 +907,7 @@ func TestProjectReconciler(t *testing.T) {
 			},
 		},
 		{
-			name: "updates sentry project",
+			name: "updates sentry project name",
 			kube: []runtime.Object{
 				&sentryv1alpha1.Project{
 					ObjectMeta: metav1.ObjectMeta{
@@ -971,6 +971,75 @@ func TestProjectReconciler(t *testing.T) {
 				},
 				Status: sentryv1alpha1.ProjectStatus{
 					Slug: "my-test-project",
+				},
+			},
+		},
+		{
+			name: "updates sentry project slug",
+			kube: []runtime.Object{
+				&sentryv1alpha1.Project{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "testing",
+						Name:      "test",
+					},
+					Spec: sentryv1alpha1.ProjectSpec{
+						Name: "My Test Project",
+						Slug: "new-slug",
+						TeamRef: sentryv1alpha1.TeamReference{
+							Namespace: "testing",
+							Name:      "test",
+						},
+					},
+					Status: sentryv1alpha1.ProjectStatus{
+						Slug: "old-slug",
+					},
+				},
+				&sentryv1alpha1.Team{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "testing",
+					},
+					Spec: sentryv1alpha1.TeamSpec{
+						Name: "My Team",
+					},
+					Status: sentryv1alpha1.TeamStatus{
+						Slug: "my-team",
+					},
+				},
+			},
+			req: reconcile.Request{
+				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test"},
+			},
+			sentry: &sentry.Fake{
+				Orgs: []*sentry.Organization{
+					{
+						Slug: "my-sentry-org",
+					},
+				},
+				Teams: []*sentry.Team{
+					{
+						Slug: "my-team",
+					},
+				},
+				Projects: []*sentry.Project{
+					{
+						Slug: "old-slug",
+						Name: "My Name",
+					},
+				},
+			},
+			wantProjects: []*sentry.Project{
+				{
+					Slug: "new-slug",
+					Name: "My Test Project",
+				},
+			},
+			wantKubeProject: &sentryv1alpha1.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Finalizers: []string{finalizerName},
+				},
+				Status: sentryv1alpha1.ProjectStatus{
+					Slug: "new-slug",
 				},
 			},
 		},

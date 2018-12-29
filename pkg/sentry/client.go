@@ -19,7 +19,7 @@ type Client interface {
 
 	GetProject(ctx context.Context, org, slug string) (*Project, *http.Response, error)
 	CreateProject(ctx context.Context, org, team, name, slug string) (*Project, *http.Response, error)
-	UpdateProjectName(ctx context.Context, org, slug, name string) (*http.Response, error)
+	UpdateProject(ctx context.Context, org, slug, newName, newSlug string) (*Project, *http.Response, error)
 	DeleteProject(ctx context.Context, org, slug string) (*http.Response, error)
 
 	GetClientKeys(ctx context.Context, org, proj string) ([]*ClientKey, *http.Response, error)
@@ -178,16 +178,21 @@ func (c *httpClient) CreateProject(ctx context.Context, org, team, name, slug st
 }
 
 // https://docs.sentry.io/api/projects/put-project-details/
-func (c *httpClient) UpdateProjectName(ctx context.Context, org, slug, name string) (*http.Response, error) {
+func (c *httpClient) UpdateProject(ctx context.Context, org, slug, newName, newSlug string) (*Project, *http.Response, error) {
 	req, err := c.newRequest(
 		http.MethodPut,
 		fmt.Sprintf("projects/%s/%s/", org, slug),
-		Project{Name: name},
+		Project{Name: newName, Slug: newSlug},
 	)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return c.do(ctx, req, nil)
+	proj := &Project{}
+	resp, err := c.do(ctx, req, proj)
+	if err != nil {
+		return nil, resp, err
+	}
+	return proj, resp, nil
 }
 
 // https://docs.sentry.io/api/projects/delete-project-details/

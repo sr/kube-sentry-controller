@@ -47,14 +47,19 @@ func (s *Fake) CreateTeam(ctx context.Context, org, name, slug string) (*Team, *
 	return t, nil, nil
 }
 
-func (s *Fake) UpdateProjectName(ctx context.Context, org, slug, name string) (*http.Response, error) {
+func (s *Fake) UpdateProject(ctx context.Context, org, slug, newName, newSlug string) (*Project, *http.Response, error) {
 	for _, p := range s.Projects {
 		if p.Slug == slug {
-			p.Name = name
-			return &http.Response{StatusCode: http.StatusOK}, nil
+			if newName != "" {
+				p.Name = newName
+			}
+			if newSlug != "" {
+				p.Slug = newSlug
+			}
+			return p, &http.Response{StatusCode: http.StatusOK}, nil
 		}
 	}
-	return &http.Response{StatusCode: http.StatusNotFound}, errors.New("found found")
+	return nil, &http.Response{StatusCode: http.StatusNotFound}, errors.New("found found")
 }
 
 func (s *Fake) UpdateTeamName(ctx context.Context, org, slug, name string) (*http.Response, error) {
