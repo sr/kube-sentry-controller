@@ -6,19 +6,13 @@ import (
 
 // ClientKeySpec defines the desired state of ClientKey
 type ClientKeySpec struct {
-	Name       string           `json:"name"`
-	ProjectRef ProjectReference `json:"projectRef"`
+	Name        string `json:"name"`
+	ProjectSlug string `json:"projectSlug"`
 }
 
 // ClientKeyStatus defines the observed state of ClientKey
 type ClientKeyStatus struct {
-	ID      string `json:"id"`
-	Project string `json:"project"`
-}
-
-type ProjectReference struct {
-	Namespace string `json:"namespace"`
-	Name      string `json:"name"`
+	ID string `json:"id"`
 }
 
 // +genclient

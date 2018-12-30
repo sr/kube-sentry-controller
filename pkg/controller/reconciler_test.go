@@ -31,11 +31,8 @@ func TestClientKeyReconciler(t *testing.T) {
 			Name:      "test-key",
 		},
 		Spec: sentryv1alpha1.ClientKeySpec{
-			Name: "My Key",
-			ProjectRef: sentryv1alpha1.ProjectReference{
-				Namespace: "testing",
-				Name:      "test-proj",
-			},
+			Name:        "My Key",
+			ProjectSlug: "test-proj",
 		},
 	}
 
@@ -68,7 +65,7 @@ func TestClientKeyReconciler(t *testing.T) {
 			wantErr: errors.New("failed to get organization"),
 		},
 		{
-			name: "errors if referenced project object does not exist",
+			name: "errors if project does not exist",
 			kube: []runtime.Object{
 				&sentryv1alpha1.ClientKey{
 					ObjectMeta: metav1.ObjectMeta{
@@ -76,11 +73,8 @@ func TestClientKeyReconciler(t *testing.T) {
 						Namespace: "testing",
 					},
 					Spec: sentryv1alpha1.ClientKeySpec{
-						Name: "My Test Project",
-						ProjectRef: sentryv1alpha1.ProjectReference{
-							Namespace: "testing",
-							Name:      "not-found",
-						},
+						Name:        "My Test Project",
+						ProjectSlug: "not-found",
 					},
 				},
 			},
@@ -94,7 +88,15 @@ func TestClientKeyReconciler(t *testing.T) {
 			req: reconcile.Request{
 				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test"},
 			},
-			wantErr: errors.New("failed to get project referenced in projectRef"),
+			wantErr: errors.New("failed to create client key"),
+			wantKubeClientKey: &sentryv1alpha1.ClientKey{
+				ObjectMeta: metav1.ObjectMeta{
+					Finalizers: []string{finalizerName},
+				},
+				Status: sentryv1alpha1.ClientKeyStatus{
+					ID: "",
+				},
+			},
 		},
 		{
 			name: "errors if project does not exist",
@@ -105,20 +107,8 @@ func TestClientKeyReconciler(t *testing.T) {
 						Name:      "test-key",
 					},
 					Spec: sentryv1alpha1.ClientKeySpec{
-						Name: "My Key",
-						ProjectRef: sentryv1alpha1.ProjectReference{
-							Namespace: "testing",
-							Name:      "test-proj",
-						},
-					},
-				},
-				&sentryv1alpha1.Project{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "testing",
-						Name:      "test-proj",
-					},
-					Status: sentryv1alpha1.ProjectStatus{
-						Slug: "not-found",
+						Name:        "My Key",
+						ProjectSlug: "test-proj",
 					},
 				},
 			},
@@ -137,26 +127,14 @@ func TestClientKeyReconciler(t *testing.T) {
 		{
 			name: "creates sentry client key and secret",
 			kube: []runtime.Object{
-				&sentryv1alpha1.Project{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "testing",
-						Name:      "test-proj",
-					},
-					Status: sentryv1alpha1.ProjectStatus{
-						Slug: "my-project",
-					},
-				},
 				&sentryv1alpha1.ClientKey{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "testing",
 						Name:      "sentry-key-1",
 					},
 					Spec: sentryv1alpha1.ClientKeySpec{
-						Name: "My Key",
-						ProjectRef: sentryv1alpha1.ProjectReference{
-							Namespace: "testing",
-							Name:      "test-proj",
-						},
+						Name:        "My Key",
+						ProjectSlug: "test-proj",
 					},
 				},
 			},
@@ -171,7 +149,7 @@ func TestClientKeyReconciler(t *testing.T) {
 				},
 				Projects: []*sentry.Project{
 					{
-						Slug: "my-project",
+						Slug: "test-proj",
 					},
 				},
 			},
@@ -186,8 +164,7 @@ func TestClientKeyReconciler(t *testing.T) {
 					Finalizers: []string{finalizerName},
 				},
 				Status: sentryv1alpha1.ClientKeyStatus{
-					ID:      "1",
-					Project: "my-project",
+					ID: "1",
 				},
 			},
 			wantKubeSecrets: []*corev1.Secret{
@@ -207,30 +184,17 @@ func TestClientKeyReconciler(t *testing.T) {
 		{
 			name: "updates sentry client key and corresponding secret",
 			kube: []runtime.Object{
-				&sentryv1alpha1.Project{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "testing",
-						Name:      "test-proj",
-					},
-					Status: sentryv1alpha1.ProjectStatus{
-						Slug: "my-project",
-					},
-				},
 				&sentryv1alpha1.ClientKey{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "testing",
 						Name:      "test-key",
 					},
 					Spec: sentryv1alpha1.ClientKeySpec{
-						Name: "new key name",
-						ProjectRef: sentryv1alpha1.ProjectReference{
-							Namespace: "testing",
-							Name:      "test-proj",
-						},
+						Name:        "new key name",
+						ProjectSlug: "test-proj",
 					},
 					Status: sentryv1alpha1.ClientKeyStatus{
-						ID:      "1",
-						Project: "my-project",
+						ID: "1",
 					},
 				},
 				&corev1.Secret{
@@ -256,7 +220,7 @@ func TestClientKeyReconciler(t *testing.T) {
 				},
 				Projects: []*sentry.Project{
 					{
-						Slug: "my-project",
+						Slug: "test-proj",
 					},
 				},
 				ClientKeys: []*sentry.ClientKey{
@@ -282,8 +246,7 @@ func TestClientKeyReconciler(t *testing.T) {
 					Finalizers: []string{finalizerName},
 				},
 				Status: sentryv1alpha1.ClientKeyStatus{
-					ID:      "1",
-					Project: "my-project",
+					ID: "1",
 				},
 			},
 			wantKubeSecrets: []*corev1.Secret{
@@ -311,15 +274,11 @@ func TestClientKeyReconciler(t *testing.T) {
 						Finalizers:        []string{finalizerName},
 					},
 					Spec: sentryv1alpha1.ClientKeySpec{
-						Name: "new key name",
-						ProjectRef: sentryv1alpha1.ProjectReference{
-							Namespace: "testing",
-							Name:      "test-proj",
-						},
+						Name:        "new key name",
+						ProjectSlug: "test-proj",
 					},
 					Status: sentryv1alpha1.ClientKeyStatus{
-						ID:      "1",
-						Project: "my-project",
+						ID: "1",
 					},
 				},
 			},
@@ -381,15 +340,11 @@ func TestClientKeyReconciler(t *testing.T) {
 						Finalizers:        []string{finalizerName},
 					},
 					Spec: sentryv1alpha1.ClientKeySpec{
-						Name: "new key name",
-						ProjectRef: sentryv1alpha1.ProjectReference{
-							Namespace: "testing",
-							Name:      "test-proj",
-						},
+						Name:        "new key name",
+						ProjectSlug: "test-proj",
 					},
 					Status: sentryv1alpha1.ClientKeyStatus{
-						ID:      "1",
-						Project: "my-project",
+						ID: "1",
 					},
 				},
 			},
@@ -465,9 +420,6 @@ func TestClientKeyReconciler(t *testing.T) {
 				}
 				if got.Status.ID != want.Status.ID {
 					t.Fatalf("want status.id %s, got: %s", want.Status.ID, got.Status.ID)
-				}
-				if got.Status.Project != want.Status.Project {
-					t.Fatalf("want status.project %s, got: %s", want.Status.Project, got.Status.Project)
 				}
 				if !reflect.DeepEqual(got.ObjectMeta.Finalizers, want.ObjectMeta.Finalizers) {
 					t.Errorf("want finalizers %+v, got: %+v", want.ObjectMeta.Finalizers, got.ObjectMeta.Finalizers)
@@ -811,7 +763,7 @@ func TestProjectReconciler(t *testing.T) {
 			wantErr: errors.New("failed to get organization"),
 		},
 		{
-			name: "errors if referenced team object not exist",
+			name: "errors if team does not exist",
 			kube: []runtime.Object{
 				&sentryv1alpha1.Project{
 					ObjectMeta: metav1.ObjectMeta{
@@ -819,11 +771,8 @@ func TestProjectReconciler(t *testing.T) {
 						Namespace: "testing",
 					},
 					Spec: sentryv1alpha1.ProjectSpec{
-						Slug: "my-test-project",
-						TeamRef: sentryv1alpha1.TeamReference{
-							Namespace: "testing",
-							Name:      "team-not-found",
-						},
+						Slug:     "my-test-project",
+						TeamSlug: "team-not-found",
 					},
 				},
 			},
@@ -837,7 +786,7 @@ func TestProjectReconciler(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("failed to get team referenced"),
+			wantErr: errors.New("failed to create project"),
 		},
 		{
 			name: "creates sentry project",
@@ -848,23 +797,8 @@ func TestProjectReconciler(t *testing.T) {
 						Namespace: "testing",
 					},
 					Spec: sentryv1alpha1.ProjectSpec{
-						Slug: "my-test-project",
-						TeamRef: sentryv1alpha1.TeamReference{
-							Namespace: "testing",
-							Name:      "test",
-						},
-					},
-				},
-				&sentryv1alpha1.Team{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "testing",
-						Name:      "test",
-					},
-					Spec: sentryv1alpha1.TeamSpec{
-						Slug: "my-team",
-					},
-					Status: sentryv1alpha1.TeamStatus{
-						Slug: "my-team",
+						Slug:     "my-test-project",
+						TeamSlug: "my-team",
 					},
 				},
 			},
@@ -907,11 +841,8 @@ func TestProjectReconciler(t *testing.T) {
 						Name:      "test",
 					},
 					Spec: sentryv1alpha1.ProjectSpec{
-						Slug: "new-slug",
-						TeamRef: sentryv1alpha1.TeamReference{
-							Namespace: "testing",
-							Name:      "test",
-						},
+						Slug:     "new-slug",
+						TeamSlug: "test",
 					},
 					Status: sentryv1alpha1.ProjectStatus{
 						Slug: "old-slug",
@@ -977,11 +908,8 @@ func TestProjectReconciler(t *testing.T) {
 						Finalizers:        []string{finalizerName},
 					},
 					Spec: sentryv1alpha1.ProjectSpec{
-						Slug: "my-test-project",
-						TeamRef: sentryv1alpha1.TeamReference{
-							Namespace: "testing",
-							Name:      "test",
-						},
+						Slug:     "my-test-project",
+						TeamSlug: "test",
 					},
 					Status: sentryv1alpha1.ProjectStatus{
 						Slug: "my-test-project",

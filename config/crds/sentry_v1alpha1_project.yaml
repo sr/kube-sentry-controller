@@ -30,19 +30,11 @@ spec:
           properties:
             slug:
               type: string
-            teamRef:
-              properties:
-                name:
-                  type: string
-                namespace:
-                  type: string
-              required:
-              - namespace
-              - name
-              type: object
+            teamSlug:
+              type: string
           required:
           - slug
-          - teamRef
+          - teamSlug
           type: object
         status:
           properties:

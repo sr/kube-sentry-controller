@@ -55,7 +55,7 @@ func (r *reconcilerSet) Team(request reconcile.Request) (reconcile.Result, error
 
 		if instance.Status.Slug != "" {
 			resp, err := r.sentry.DeleteTeam(ctx, org.Slug, instance.Status.Slug)
-			if err != nil && resp.StatusCode != 404 {
+			if err != nil && resp.StatusCode != http.StatusNotFound {
 				return reconcile.Result{}, errors.Wrapf(err, "failed to delete team %s", instance.Status.Slug)
 			}
 		}
@@ -147,20 +147,8 @@ func (r *reconcilerSet) Project(request reconcile.Request) (reconcile.Result, er
 		}
 	}
 
-	kubeTeam := &sentryv1alpha1.Team{}
-	if err := r.kube.Get(
-		ctx,
-		client.ObjectKey{
-			Namespace: instance.Spec.TeamRef.Namespace,
-			Name:      instance.Spec.TeamRef.Name,
-		},
-		kubeTeam,
-	); err != nil {
-		return reconcile.Result{}, errors.Wrap(err, "failed to get team referenced by teamRef")
-	}
-
 	if instance.Status.Slug == "" {
-		proj, _, err := r.sentry.CreateProject(ctx, org.Slug, kubeTeam.Status.Slug, instance.Spec.Slug, instance.Spec.Slug)
+		proj, _, err := r.sentry.CreateProject(ctx, org.Slug, instance.Spec.TeamSlug, instance.Spec.Slug, instance.Spec.Slug)
 		if err != nil {
 			return reconcile.Result{}, errors.Wrapf(err, "failed to create project %s", instance.Spec.Slug)
 		}
@@ -211,10 +199,10 @@ func (r *reconcilerSet) ClientKey(request reconcile.Request) (reconcile.Result, 
 		}
 
 		if instance.Status.ID != "" {
-			resp, err := r.sentry.DeleteClientKey(ctx, org.Slug, instance.Status.Project, instance.Status.ID)
+			resp, err := r.sentry.DeleteClientKey(ctx, org.Slug, instance.Spec.ProjectSlug, instance.Status.ID)
 
 			if err != nil && resp.StatusCode != http.StatusNotFound {
-				return reconcile.Result{}, errors.Wrapf(err, "failed to delete client key for project %s", instance.Status.Project)
+				return reconcile.Result{}, errors.Wrapf(err, "failed to delete client key for project %s", instance.Spec.ProjectSlug)
 			}
 		}
 
@@ -232,33 +220,20 @@ func (r *reconcilerSet) ClientKey(request reconcile.Request) (reconcile.Result, 
 		}
 	}
 
-	kubeProj := &sentryv1alpha1.Project{}
-	if err := r.kube.Get(
-		ctx,
-		client.ObjectKey{
-			Namespace: instance.Spec.ProjectRef.Namespace,
-			Name:      instance.Spec.ProjectRef.Name,
-		},
-		kubeProj,
-	); err != nil {
-		return reconcile.Result{}, errors.Wrap(err, "failed to get project referenced in projectRef")
-	}
-
 	var key *sentry.ClientKey
 	if instance.Status.ID == "" {
-		key, _, err = r.sentry.CreateClientKey(ctx, org.Slug, kubeProj.Status.Slug, instance.Spec.Name)
+		key, _, err = r.sentry.CreateClientKey(ctx, org.Slug, instance.Spec.ProjectSlug, instance.Spec.Name)
 		if err != nil {
-			return reconcile.Result{}, errors.Wrapf(err, "failed to create client key for project %s", kubeProj.Status.Slug)
+			return reconcile.Result{}, errors.Wrapf(err, "failed to create client key for project %s", instance.Spec.ProjectSlug)
 		}
 
 		instance.Status.ID = key.ID
-		instance.Status.Project = kubeProj.Status.Slug
 
 		if err := r.kube.Update(ctx, instance); err != nil {
 			return reconcile.Result{}, err
 		}
 	} else {
-		keys, _, err := r.sentry.GetClientKeys(ctx, org.Slug, kubeProj.Status.Slug)
+		keys, _, err := r.sentry.GetClientKeys(ctx, org.Slug, instance.Spec.ProjectSlug)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -274,7 +249,7 @@ func (r *reconcilerSet) ClientKey(request reconcile.Request) (reconcile.Result, 
 	}
 
 	if key.Name != instance.Spec.Name {
-		if _, err := r.sentry.UpdateClientKey(ctx, org.Slug, kubeProj.Status.Slug, instance.Status.ID, instance.Spec.Name); err != nil {
+		if _, err := r.sentry.UpdateClientKey(ctx, org.Slug, instance.Spec.ProjectSlug, instance.Status.ID, instance.Spec.Name); err != nil {
 			return reconcile.Result{}, errors.Wrap(err, "failed to rename client key")
 		}
 	}

@@ -30,29 +30,18 @@ spec:
           properties:
             name:
               type: string
-            projectRef:
-              properties:
-                name:
-                  type: string
-                namespace:
-                  type: string
-              required:
-              - namespace
-              - name
-              type: object
+            projectSlug:
+              type: string
           required:
           - name
-          - projectRef
+          - projectSlug
           type: object
         status:
           properties:
             id:
               type: string
-            project:
-              type: string
           required:
           - id
-          - project
           type: object
   version: v1alpha1
 status:
