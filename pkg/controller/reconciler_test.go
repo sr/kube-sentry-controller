@@ -503,7 +503,7 @@ func TestTeamReconciler(t *testing.T) {
 			Namespace: "testing",
 		},
 		Spec: sentryv1alpha1.TeamSpec{
-			Name: "Testing",
+			Slug: "testing",
 		},
 	}
 
@@ -543,7 +543,7 @@ func TestTeamReconciler(t *testing.T) {
 						Namespace: "testing",
 					},
 					Spec: sentryv1alpha1.TeamSpec{
-						Name: "Test Team",
+						Slug: "test-team",
 					},
 				},
 			},
@@ -575,7 +575,7 @@ func TestTeamReconciler(t *testing.T) {
 			},
 		},
 		{
-			name: "updates sentry team",
+			name: "updates sentry team slug",
 			kube: []runtime.Object{
 				&sentryv1alpha1.Team{
 					ObjectMeta: metav1.ObjectMeta{
@@ -583,10 +583,10 @@ func TestTeamReconciler(t *testing.T) {
 						Name:      "team",
 					},
 					Spec: sentryv1alpha1.TeamSpec{
-						Name: "New Team Name",
+						Slug: "new-slug",
 					},
 					Status: sentryv1alpha1.TeamStatus{
-						Slug: "test-team",
+						Slug: "old-slug",
 					},
 				},
 			},
@@ -601,15 +601,13 @@ func TestTeamReconciler(t *testing.T) {
 				},
 				Teams: []*sentry.Team{
 					{
-						Slug: "test-team",
-						Name: "Old Team Name",
+						Slug: "old-slug",
 					},
 				},
 			},
 			wantSentryTeams: []*sentry.Team{
 				{
-					Slug: "test-team",
-					Name: "New Team Name",
+					Slug: "new-slug",
 				},
 			},
 			wantKubeTeam: &sentryv1alpha1.Team{
@@ -619,7 +617,7 @@ func TestTeamReconciler(t *testing.T) {
 					Finalizers: []string{finalizerName},
 				},
 				Status: sentryv1alpha1.TeamStatus{
-					Slug: "test-team",
+					Slug: "new-slug",
 				},
 			},
 		},
@@ -634,7 +632,7 @@ func TestTeamReconciler(t *testing.T) {
 						Finalizers:        []string{finalizerName},
 					},
 					Spec: sentryv1alpha1.TeamSpec{
-						Name: "Test Name",
+						Slug: "test-team",
 					},
 					Status: sentryv1alpha1.TeamStatus{
 						Slug: "test-team",
@@ -653,18 +651,15 @@ func TestTeamReconciler(t *testing.T) {
 				Teams: []*sentry.Team{
 					{
 						Slug: "test-team",
-						Name: "Test Team",
 					},
 					{
 						Slug: "other-team",
-						Name: "Other Team",
 					},
 				},
 			},
 			wantSentryTeams: []*sentry.Team{
 				{
 					Slug: "other-team",
-					Name: "Other Team",
 				},
 			},
 			wantKubeTeam: &sentryv1alpha1.Team{
@@ -687,7 +682,7 @@ func TestTeamReconciler(t *testing.T) {
 						Finalizers:        []string{finalizerName},
 					},
 					Spec: sentryv1alpha1.TeamSpec{
-						Name: "Test Name",
+						Slug: "test-team",
 					},
 					Status: sentryv1alpha1.TeamStatus{
 						Slug: "test-team",
@@ -747,9 +742,6 @@ func TestTeamReconciler(t *testing.T) {
 			for i, want := range tc.wantSentryTeams {
 				got := tc.sentry.Teams[i]
 
-				if want.Name != got.Name {
-					t.Fatalf("want team #%d name %q, got: %q", i, want.Name, got.Name)
-				}
 				if want.Slug != got.Slug {
 					t.Fatalf("want team #%d slug %q, got: %q", i, want.Slug, got.Slug)
 				}
@@ -869,7 +861,7 @@ func TestProjectReconciler(t *testing.T) {
 						Name:      "test",
 					},
 					Spec: sentryv1alpha1.TeamSpec{
-						Name: "My Test Project",
+						Slug: "my-team",
 					},
 					Status: sentryv1alpha1.TeamStatus{
 						Slug: "my-team",
@@ -931,7 +923,7 @@ func TestProjectReconciler(t *testing.T) {
 						Namespace: "testing",
 					},
 					Spec: sentryv1alpha1.TeamSpec{
-						Name: "My Team",
+						Slug: "my-team",
 					},
 					Status: sentryv1alpha1.TeamStatus{
 						Slug: "my-team",

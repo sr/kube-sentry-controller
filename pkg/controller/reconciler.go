@@ -75,9 +75,9 @@ func (r *reconcilerSet) Team(request reconcile.Request) (reconcile.Result, error
 	}
 
 	if instance.Status.Slug == "" {
-		team, _, err := r.sentry.CreateTeam(ctx, org.Slug, instance.Spec.Name, "")
+		team, _, err := r.sentry.CreateTeam(ctx, org.Slug, instance.Spec.Slug, instance.Spec.Slug)
 		if err != nil {
-			return reconcile.Result{}, errors.Wrapf(err, "failed to create team %s", instance.Spec.Name)
+			return reconcile.Result{}, errors.Wrapf(err, "failed to create team %s", instance.Spec.Slug)
 		}
 		instance.Status.Slug = team.Slug
 
@@ -89,12 +89,16 @@ func (r *reconcilerSet) Team(request reconcile.Request) (reconcile.Result, error
 		return reconcile.Result{}, errors.Wrapf(err, "failed to get team %s", instance.Status.Slug)
 	}
 
-	if team.Name == instance.Spec.Name {
+	if team.Slug == instance.Spec.Slug {
 		return reconcile.Result{}, nil
 	}
 
-	_, err = r.sentry.UpdateTeamName(ctx, org.Slug, team.Slug, instance.Spec.Name)
-	return reconcile.Result{}, err
+	team, _, err = r.sentry.UpdateTeam(ctx, org.Slug, team.Slug, instance.Spec.Slug, instance.Spec.Slug)
+	if err != nil {
+		return reconcile.Result{}, errors.Wrapf(err, "failed to update project %s", team.Slug)
+	}
+	instance.Status.Slug = team.Slug
+	return reconcile.Result{}, r.kube.Update(ctx, instance)
 }
 
 // +kubebuilder:rbac:groups=sentry.sr.github.com,resources=sentryprojects,verbs=get;list;watch;create;update;patch;delete
@@ -270,7 +274,7 @@ func (r *reconcilerSet) ClientKey(request reconcile.Request) (reconcile.Result, 
 	}
 
 	if key.Name != instance.Spec.Name {
-		if _, err := r.sentry.UpdateClientKeyName(ctx, org.Slug, kubeProj.Status.Slug, instance.Status.ID, instance.Spec.Name); err != nil {
+		if _, err := r.sentry.UpdateClientKey(ctx, org.Slug, kubeProj.Status.Slug, instance.Status.ID, instance.Spec.Name); err != nil {
 			return reconcile.Result{}, errors.Wrap(err, "failed to rename client key")
 		}
 	}

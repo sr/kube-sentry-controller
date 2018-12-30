@@ -28,10 +28,10 @@ spec:
           type: object
         spec:
           properties:
-            name:
+            slug:
               type: string
           required:
-          - name
+          - slug
           type: object
         status:
           properties:

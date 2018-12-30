@@ -6,7 +6,7 @@ import (
 
 // TeamSpec defines the desired state of Team
 type TeamSpec struct {
-	Name string `json:"name"`
+	Slug string `json:"slug"`
 }
 
 // TeamStatus defines the observed state of Team

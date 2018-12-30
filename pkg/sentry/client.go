@@ -15,7 +15,7 @@ type Client interface {
 
 	GetTeam(ctx context.Context, org, slug string) (*Team, *http.Response, error)
 	CreateTeam(ctx context.Context, org, name, slug string) (*Team, *http.Response, error)
-	UpdateTeamName(ctx context.Context, org, slug, name string) (*http.Response, error)
+	UpdateTeam(ctx context.Context, org, slug, newName, newSlug string) (*Team, *http.Response, error)
 	DeleteTeam(ctx context.Context, org, slug string) (*http.Response, error)
 
 	GetProject(ctx context.Context, org, slug string) (*Project, *http.Response, error)
@@ -25,7 +25,7 @@ type Client interface {
 
 	GetClientKeys(ctx context.Context, org, proj string) ([]*ClientKey, *http.Response, error)
 	CreateClientKey(ctx context.Context, org, proj, name string) (*ClientKey, *http.Response, error)
-	UpdateClientKeyName(ctx context.Context, org, proj, id, name string) (*http.Response, error)
+	UpdateClientKey(ctx context.Context, org, proj, id, name string) (*http.Response, error)
 	DeleteClientKey(ctx context.Context, org, proj, id string) (*http.Response, error)
 }
 
@@ -125,16 +125,21 @@ func (c *httpClient) CreateTeam(ctx context.Context, org, name, slug string) (*T
 }
 
 // https://docs.sentry.io/api/teams/put-team-details/
-func (c *httpClient) UpdateTeamName(ctx context.Context, org, slug, name string) (*http.Response, error) {
+func (c *httpClient) UpdateTeam(ctx context.Context, org, slug, newName, newSlug string) (*Team, *http.Response, error) {
 	req, err := c.newRequest(
 		http.MethodPut,
 		fmt.Sprintf("teams/%s/%s/", org, slug),
-		Team{Name: name},
+		Team{Name: newName, Slug: newSlug},
 	)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return c.do(ctx, req, nil)
+	team := &Team{}
+	resp, err := c.do(ctx, req, team)
+	if err != nil {
+		return nil, resp, err
+	}
+	return team, resp, nil
 }
 
 // https://docs.sentry.io/api/teams/delete-team-details/
@@ -238,7 +243,7 @@ func (c *httpClient) CreateClientKey(ctx context.Context, org, proj, name string
 }
 
 // https://docs.sentry.io/api/projects/put-project-key-details/
-func (c *httpClient) UpdateClientKeyName(ctx context.Context, org, proj, id, name string) (*http.Response, error) {
+func (c *httpClient) UpdateClientKey(ctx context.Context, org, proj, id, name string) (*http.Response, error) {
 	req, err := c.newRequest(
 		http.MethodPut,
 		fmt.Sprintf("projects/%s/%s/keys/%s/", org, proj, id),

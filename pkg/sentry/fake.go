@@ -62,14 +62,19 @@ func (s *Fake) UpdateProject(ctx context.Context, org, slug, newName, newSlug st
 	return nil, &http.Response{StatusCode: http.StatusNotFound}, errors.New("found found")
 }
 
-func (s *Fake) UpdateTeamName(ctx context.Context, org, slug, name string) (*http.Response, error) {
+func (s *Fake) UpdateTeam(ctx context.Context, org, slug, newName, newSlug string) (*Team, *http.Response, error) {
 	for _, t := range s.Teams {
 		if t.Slug == slug {
-			t.Name = name
-			return &http.Response{StatusCode: http.StatusOK}, nil
+			if newName != "" {
+				t.Name = newName
+			}
+			if newSlug != "" {
+				t.Slug = newSlug
+			}
+			return t, &http.Response{StatusCode: http.StatusOK}, nil
 		}
 	}
-	return &http.Response{StatusCode: http.StatusNotFound}, errors.New("not fond")
+	return nil, &http.Response{StatusCode: http.StatusNotFound}, errors.New("not fond")
 }
 
 func (s *Fake) DeleteTeam(ctx context.Context, org, slug string) (*http.Response, error) {
@@ -141,7 +146,7 @@ func (s *Fake) GetClientKeys(ctx context.Context, org, proj string) ([]*ClientKe
 	return s.ClientKeys, nil, nil
 }
 
-func (s *Fake) UpdateClientKeyName(ctx context.Context, org, proj, id, name string) (*http.Response, error) {
+func (s *Fake) UpdateClientKey(ctx context.Context, org, proj, id, name string) (*http.Response, error) {
 	var found bool
 	for _, p := range s.Projects {
 		if p.Slug == proj {
