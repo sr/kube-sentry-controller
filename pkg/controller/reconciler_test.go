@@ -293,7 +293,7 @@ func TestClientKeyReconciler(t *testing.T) {
 				},
 				Projects: []*sentry.Project{
 					{
-						Slug: "my-project",
+						Slug: "test-proj",
 					},
 				},
 				ClientKeys: []*sentry.ClientKey{
