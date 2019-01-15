@@ -170,7 +170,7 @@ func (c *httpClient) CreateProject(ctx context.Context, org, team, name, slug st
 	req, err := c.newRequest(
 		http.MethodPost,
 		fmt.Sprintf("teams/%s/%s/projects/", org, team),
-		Project{Slug: slug},
+		Project{Slug: slug, Name: name},
 	)
 	if err != nil {
 		return nil, nil, err

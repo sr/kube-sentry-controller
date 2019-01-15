@@ -62,7 +62,7 @@ func TestClientKeyReconciler(t *testing.T) {
 				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test-key"},
 			},
 			sentry:  &sentry.Fake{},
-			wantErr: errors.New("failed to get organization"),
+			wantErr: errors.New("organization not found"),
 		},
 		{
 			name: "errors if project does not exist",
@@ -73,8 +73,9 @@ func TestClientKeyReconciler(t *testing.T) {
 						Namespace: "testing",
 					},
 					Spec: sentryv1alpha1.ClientKeySpec{
-						Name:        "My Test Project",
-						ProjectSlug: "not-found",
+						Name:             "My Test Project",
+						ProjectSlug:      "not-found",
+						OrganizationSlug: "my-sentry-org",
 					},
 				},
 			},
@@ -107,8 +108,9 @@ func TestClientKeyReconciler(t *testing.T) {
 						Name:      "test-key",
 					},
 					Spec: sentryv1alpha1.ClientKeySpec{
-						Name:        "My Key",
-						ProjectSlug: "test-proj",
+						Name:             "My Key",
+						ProjectSlug:      "test-proj",
+						OrganizationSlug: "my-sentry-org",
 					},
 				},
 			},
@@ -133,8 +135,9 @@ func TestClientKeyReconciler(t *testing.T) {
 						Name:      "sentry-key-1",
 					},
 					Spec: sentryv1alpha1.ClientKeySpec{
-						Name:        "My Key",
-						ProjectSlug: "test-proj",
+						Name:             "My Key",
+						ProjectSlug:      "test-proj",
+						OrganizationSlug: "my-sentry-org",
 					},
 				},
 			},
@@ -164,7 +167,9 @@ func TestClientKeyReconciler(t *testing.T) {
 					Finalizers: []string{finalizerName},
 				},
 				Status: sentryv1alpha1.ClientKeyStatus{
-					ID: "1",
+					ID:               "1",
+					ProjectSlug:      "test-proj",
+					OrganizationSlug: "my-sentry-org",
 				},
 			},
 			wantKubeSecrets: []*corev1.Secret{
@@ -190,11 +195,14 @@ func TestClientKeyReconciler(t *testing.T) {
 						Name:      "test-key",
 					},
 					Spec: sentryv1alpha1.ClientKeySpec{
-						Name:        "new key name",
-						ProjectSlug: "test-proj",
+						Name:             "new key name",
+						ProjectSlug:      "test-proj",
+						OrganizationSlug: "my-sentry-org",
 					},
 					Status: sentryv1alpha1.ClientKeyStatus{
-						ID: "1",
+						ID:               "1",
+						ProjectSlug:      "test-proj",
+						OrganizationSlug: "my-sentry-org",
 					},
 				},
 				&corev1.Secret{
@@ -246,7 +254,9 @@ func TestClientKeyReconciler(t *testing.T) {
 					Finalizers: []string{finalizerName},
 				},
 				Status: sentryv1alpha1.ClientKeyStatus{
-					ID: "1",
+					ID:               "1",
+					ProjectSlug:      "test-proj",
+					OrganizationSlug: "my-sentry-org",
 				},
 			},
 			wantKubeSecrets: []*corev1.Secret{
@@ -274,11 +284,14 @@ func TestClientKeyReconciler(t *testing.T) {
 						Finalizers:        []string{finalizerName},
 					},
 					Spec: sentryv1alpha1.ClientKeySpec{
-						Name:        "new key name",
-						ProjectSlug: "test-proj",
+						Name:             "new key name",
+						ProjectSlug:      "test-proj",
+						OrganizationSlug: "my-sentry-org",
 					},
 					Status: sentryv1alpha1.ClientKeyStatus{
-						ID: "1",
+						ID:               "1",
+						ProjectSlug:      "test-proj",
+						OrganizationSlug: "my-sentry-org",
 					},
 				},
 			},
@@ -340,11 +353,14 @@ func TestClientKeyReconciler(t *testing.T) {
 						Finalizers:        []string{finalizerName},
 					},
 					Spec: sentryv1alpha1.ClientKeySpec{
-						Name:        "new key name",
-						ProjectSlug: "test-proj",
+						Name:             "new key name",
+						ProjectSlug:      "test-proj",
+						OrganizationSlug: "my-sentry-org",
 					},
 					Status: sentryv1alpha1.ClientKeyStatus{
-						ID: "1",
+						ID:               "1",
+						OrganizationSlug: "my-sentry-org",
+						ProjectSlug:      "test-proj",
 					},
 				},
 			},
@@ -374,7 +390,6 @@ func TestClientKeyReconciler(t *testing.T) {
 				scheme: scheme.Scheme,
 				kube:   fake.NewFakeClient(tc.kube...),
 				sentry: tc.sentry,
-				org:    "my-sentry-org",
 			}
 
 			_, err := r.ClientKey(tc.req)
@@ -421,6 +436,12 @@ func TestClientKeyReconciler(t *testing.T) {
 				if got.Status.ID != want.Status.ID {
 					t.Fatalf("want status.id %s, got: %s", want.Status.ID, got.Status.ID)
 				}
+				if got.Status.ProjectSlug != want.Status.ProjectSlug {
+					t.Errorf("want status.team %q, got: %q", want.Status.ProjectSlug, got.Status.ProjectSlug)
+				}
+				if got.Status.OrganizationSlug != want.Status.OrganizationSlug {
+					t.Errorf("want status.org %q, got: %q", want.Status.OrganizationSlug, got.Status.OrganizationSlug)
+				}
 				if !reflect.DeepEqual(got.ObjectMeta.Finalizers, want.ObjectMeta.Finalizers) {
 					t.Errorf("want finalizers %+v, got: %+v", want.ObjectMeta.Finalizers, got.ObjectMeta.Finalizers)
 				}
@@ -455,7 +476,8 @@ func TestTeamReconciler(t *testing.T) {
 			Namespace: "testing",
 		},
 		Spec: sentryv1alpha1.TeamSpec{
-			Slug: "testing",
+			Slug:             "testing",
+			OrganizationSlug: "test-sentry-org",
 		},
 	}
 
@@ -484,7 +506,7 @@ func TestTeamReconciler(t *testing.T) {
 				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test"},
 			},
 			sentry:  &sentry.Fake{},
-			wantErr: errors.New("failed to get organization"),
+			wantErr: errors.New("failed to create team"),
 		},
 		{
 			name: "creates sentry team",
@@ -495,7 +517,8 @@ func TestTeamReconciler(t *testing.T) {
 						Namespace: "testing",
 					},
 					Spec: sentryv1alpha1.TeamSpec{
-						Slug: "test-team",
+						Slug:             "test-team",
+						OrganizationSlug: "test-org",
 					},
 				},
 			},
@@ -505,7 +528,7 @@ func TestTeamReconciler(t *testing.T) {
 			sentry: &sentry.Fake{
 				Orgs: []*sentry.Organization{
 					{
-						Slug: "my-sentry-org",
+						Slug: "test-org",
 					},
 				},
 			},
@@ -522,7 +545,8 @@ func TestTeamReconciler(t *testing.T) {
 					Finalizers: []string{finalizerName},
 				},
 				Status: sentryv1alpha1.TeamStatus{
-					Slug: "test-team",
+					Slug:             "test-team",
+					OrganizationSlug: "test-org",
 				},
 			},
 		},
@@ -535,10 +559,12 @@ func TestTeamReconciler(t *testing.T) {
 						Name:      "team",
 					},
 					Spec: sentryv1alpha1.TeamSpec{
-						Slug: "new-slug",
+						OrganizationSlug: "test-org",
+						Slug:             "new-slug",
 					},
 					Status: sentryv1alpha1.TeamStatus{
-						Slug: "old-slug",
+						OrganizationSlug: "test-org",
+						Slug:             "old-slug",
 					},
 				},
 			},
@@ -548,7 +574,7 @@ func TestTeamReconciler(t *testing.T) {
 			sentry: &sentry.Fake{
 				Orgs: []*sentry.Organization{
 					{
-						Slug: "my-sentry-org",
+						Slug: "test-org",
 					},
 				},
 				Teams: []*sentry.Team{
@@ -569,7 +595,8 @@ func TestTeamReconciler(t *testing.T) {
 					Finalizers: []string{finalizerName},
 				},
 				Status: sentryv1alpha1.TeamStatus{
-					Slug: "new-slug",
+					Slug:             "new-slug",
+					OrganizationSlug: "test-org",
 				},
 			},
 		},
@@ -584,10 +611,12 @@ func TestTeamReconciler(t *testing.T) {
 						Finalizers:        []string{finalizerName},
 					},
 					Spec: sentryv1alpha1.TeamSpec{
-						Slug: "test-team",
+						Slug:             "test-team",
+						OrganizationSlug: "test-org",
 					},
 					Status: sentryv1alpha1.TeamStatus{
-						Slug: "test-team",
+						Slug:             "test-team",
+						OrganizationSlug: "test-org",
 					},
 				},
 			},
@@ -597,7 +626,7 @@ func TestTeamReconciler(t *testing.T) {
 			sentry: &sentry.Fake{
 				Orgs: []*sentry.Organization{
 					{
-						Slug: "my-sentry-org",
+						Slug: "test-org",
 					},
 				},
 				Teams: []*sentry.Team{
@@ -669,7 +698,6 @@ func TestTeamReconciler(t *testing.T) {
 				scheme: scheme.Scheme,
 				kube:   fake.NewFakeClient(tc.kube...),
 				sentry: tc.sentry,
-				org:    "my-sentry-org",
 			}
 
 			_, err := r.Team(tc.req)
@@ -712,6 +740,9 @@ func TestTeamReconciler(t *testing.T) {
 				if got.Status.Slug != want.Status.Slug {
 					t.Errorf("want status.Slug %q, got: %q", want.Status.Slug, got.Status.Slug)
 				}
+				if got.Status.OrganizationSlug != want.Status.OrganizationSlug {
+					t.Errorf("want status.org %q, got: %q", want.Status.OrganizationSlug, got.Status.OrganizationSlug)
+				}
 				if !reflect.DeepEqual(got.ObjectMeta.Finalizers, want.ObjectMeta.Finalizers) {
 					t.Errorf("want finalizers %+v, got: %+v", want.ObjectMeta.Finalizers, got.ObjectMeta.Finalizers)
 				}
@@ -731,7 +762,9 @@ func TestProjectReconciler(t *testing.T) {
 			Namespace: "testing",
 		},
 		Spec: sentryv1alpha1.ProjectSpec{
-			Slug: "my-test-project",
+			Slug:             "my-test-project",
+			OrganizationSlug: "test-org",
+			TeamSlug:         "team",
 		},
 	}
 
@@ -760,7 +793,7 @@ func TestProjectReconciler(t *testing.T) {
 				NamespacedName: client.ObjectKey{Namespace: "testing", Name: "test"},
 			},
 			sentry:  &sentry.Fake{},
-			wantErr: errors.New("failed to get organization"),
+			wantErr: errors.New("organization not found"),
 		},
 		{
 			name: "errors if team does not exist",
@@ -797,8 +830,9 @@ func TestProjectReconciler(t *testing.T) {
 						Namespace: "testing",
 					},
 					Spec: sentryv1alpha1.ProjectSpec{
-						Slug:     "my-test-project",
-						TeamSlug: "my-team",
+						Slug:             "my-test-project",
+						TeamSlug:         "my-team",
+						OrganizationSlug: "my-org",
 					},
 				},
 			},
@@ -808,7 +842,7 @@ func TestProjectReconciler(t *testing.T) {
 			sentry: &sentry.Fake{
 				Orgs: []*sentry.Organization{
 					{
-						Slug: "my-sentry-org",
+						Slug: "my-org",
 					},
 				},
 				Teams: []*sentry.Team{
@@ -828,7 +862,9 @@ func TestProjectReconciler(t *testing.T) {
 					Finalizers: []string{finalizerName},
 				},
 				Status: sentryv1alpha1.ProjectStatus{
-					Slug: "my-test-project",
+					Slug:             "my-test-project",
+					TeamSlug:         "my-team",
+					OrganizationSlug: "my-org",
 				},
 			},
 		},
@@ -841,23 +877,14 @@ func TestProjectReconciler(t *testing.T) {
 						Name:      "test",
 					},
 					Spec: sentryv1alpha1.ProjectSpec{
-						Slug:     "new-slug",
-						TeamSlug: "test",
+						OrganizationSlug: "org",
+						TeamSlug:         "my-team",
+						Slug:             "new-slug",
 					},
 					Status: sentryv1alpha1.ProjectStatus{
-						Slug: "old-slug",
-					},
-				},
-				&sentryv1alpha1.Team{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test",
-						Namespace: "testing",
-					},
-					Spec: sentryv1alpha1.TeamSpec{
-						Slug: "my-team",
-					},
-					Status: sentryv1alpha1.TeamStatus{
-						Slug: "my-team",
+						OrganizationSlug: "org",
+						TeamSlug:         "my-team",
+						Slug:             "old-slug",
 					},
 				},
 			},
@@ -867,7 +894,7 @@ func TestProjectReconciler(t *testing.T) {
 			sentry: &sentry.Fake{
 				Orgs: []*sentry.Organization{
 					{
-						Slug: "my-sentry-org",
+						Slug: "org",
 					},
 				},
 				Teams: []*sentry.Team{
@@ -893,7 +920,9 @@ func TestProjectReconciler(t *testing.T) {
 					Finalizers: []string{finalizerName},
 				},
 				Status: sentryv1alpha1.ProjectStatus{
-					Slug: "new-slug",
+					Slug:             "new-slug",
+					TeamSlug:         "my-team",
+					OrganizationSlug: "org",
 				},
 			},
 		},
@@ -908,11 +937,14 @@ func TestProjectReconciler(t *testing.T) {
 						Finalizers:        []string{finalizerName},
 					},
 					Spec: sentryv1alpha1.ProjectSpec{
-						Slug:     "my-test-project",
-						TeamSlug: "test",
+						Slug:             "my-test-project",
+						TeamSlug:         "test",
+						OrganizationSlug: "test-org",
 					},
 					Status: sentryv1alpha1.ProjectStatus{
-						Slug: "my-test-project",
+						Slug:             "my-test-project",
+						TeamSlug:         "test",
+						OrganizationSlug: "test-org",
 					},
 				},
 			},
@@ -922,7 +954,7 @@ func TestProjectReconciler(t *testing.T) {
 			sentry: &sentry.Fake{
 				Orgs: []*sentry.Organization{
 					{
-						Slug: "my-sentry-org",
+						Slug: "test-org",
 					},
 				},
 				Teams: []*sentry.Team{
@@ -995,7 +1027,6 @@ func TestProjectReconciler(t *testing.T) {
 				scheme: scheme.Scheme,
 				kube:   fake.NewFakeClient(tc.kube...),
 				sentry: tc.sentry,
-				org:    "my-sentry-org",
 			}
 
 			_, err := r.Project(tc.req)
@@ -1037,6 +1068,12 @@ func TestProjectReconciler(t *testing.T) {
 				}
 				if got.Status.Slug != want.Status.Slug {
 					t.Errorf("want status.slug %q, got: %q", want.Status.Slug, got.Status.Slug)
+				}
+				if got.Status.TeamSlug != want.Status.TeamSlug {
+					t.Errorf("want status.team %q, got: %q", want.Status.TeamSlug, got.Status.TeamSlug)
+				}
+				if got.Status.OrganizationSlug != want.Status.OrganizationSlug {
+					t.Errorf("want status.org %q, got: %q", want.Status.OrganizationSlug, got.Status.OrganizationSlug)
 				}
 				if !reflect.DeepEqual(got.ObjectMeta.Finalizers, want.ObjectMeta.Finalizers) {
 					t.Errorf("want finalizers %+v, got: %+v", want.ObjectMeta.Finalizers, got.ObjectMeta.Finalizers)

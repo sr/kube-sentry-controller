@@ -30,17 +30,26 @@ spec:
           properties:
             name:
               type: string
-            projectSlug:
+            organization:
+              type: string
+            project:
               type: string
           required:
+          - organization
+          - project
           - name
-          - projectSlug
           type: object
         status:
           properties:
             id:
               type: string
+            organization:
+              type: string
+            project:
+              type: string
           required:
+          - organization
+          - project
           - id
           type: object
   version: v1alpha1

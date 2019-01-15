@@ -6,13 +6,16 @@ import (
 
 // ClientKeySpec defines the desired state of ClientKey
 type ClientKeySpec struct {
-	Name        string `json:"name"`
-	ProjectSlug string `json:"projectSlug"`
+	OrganizationSlug string `json:"organization"`
+	ProjectSlug      string `json:"project"`
+	Name             string `json:"name"`
 }
 
 // ClientKeyStatus defines the observed state of ClientKey
 type ClientKeyStatus struct {
-	ID string `json:"id"`
+	OrganizationSlug string `json:"organization"`
+	ProjectSlug      string `json:"project"`
+	ID               string `json:"id"`
 }
 
 // +genclient

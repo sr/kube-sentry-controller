@@ -27,7 +27,6 @@ func main() {
 
 func run() error {
 	opts := &struct {
-		org         string
 		apiEndpoint string
 		apiToken    string
 		timeout     time.Duration
@@ -37,7 +36,6 @@ func run() error {
 	}
 
 	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-	fs.StringVar(&opts.org, "organization", opts.org, "Slug of the Sentry organization")
 	fs.StringVar(&opts.apiEndpoint, "api-endpoint", opts.apiEndpoint, "Sentry API endpoint")
 	fs.StringVar(&opts.apiToken, "api-token", "", "Sentry API auth token")
 	fs.DurationVar(&opts.timeout, "timeout", opts.timeout, "Timeout for a single reconcilation attempt")
@@ -45,9 +43,6 @@ func run() error {
 		return err
 	}
 
-	if opts.org == "" {
-		return fmt.Errorf("required flag missing: organization")
-	}
 	if opts.apiToken == "" {
 		return fmt.Errorf("required flag missing: api-token")
 	}
@@ -86,7 +81,7 @@ func run() error {
 		ep,
 	)
 
-	if err := sentrycontroller.Add(mgr, logger, cli, opts.org, opts.timeout); err != nil {
+	if err := sentrycontroller.Add(mgr, logger, cli, opts.timeout); err != nil {
 		return errors.Wrap(err, "failed to registry sentry controllers with the manager")
 	}
 

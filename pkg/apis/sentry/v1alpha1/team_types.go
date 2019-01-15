@@ -6,12 +6,14 @@ import (
 
 // TeamSpec defines the desired state of Team
 type TeamSpec struct {
-	Slug string `json:"slug"`
+	Slug             string `json:"slug"`
+	OrganizationSlug string `json:"organization"`
 }
 
 // TeamStatus defines the observed state of Team
 type TeamStatus struct {
-	Slug string `json:"slug"`
+	Slug             string `json:"slug"`
+	OrganizationSlug string `json:"organization"`
 }
 
 // +genclient

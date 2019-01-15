@@ -15,12 +15,11 @@ import (
 )
 
 // Add initializes the sentry controller, sets up watches, and adds it to manager.
-func Add(mgr manager.Manager, logger logr.Logger, sentry sentry.Client, org string, timeout time.Duration) error {
+func Add(mgr manager.Manager, logger logr.Logger, sentry sentry.Client, timeout time.Duration) error {
 	r := &reconcilerSet{
 		scheme:  mgr.GetScheme(),
 		kube:    mgr.GetClient(),
 		sentry:  sentry,
-		org:     org,
 		timeout: timeout,
 	}
 

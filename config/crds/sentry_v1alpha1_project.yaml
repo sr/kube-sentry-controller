@@ -28,19 +28,28 @@ spec:
           type: object
         spec:
           properties:
+            organization:
+              type: string
             slug:
               type: string
-            teamSlug:
+            team:
               type: string
           required:
+          - organization
+          - team
           - slug
-          - teamSlug
           type: object
         status:
           properties:
+            organization:
+              type: string
             slug:
               type: string
+            team:
+              type: string
           required:
+          - organization
+          - team
           - slug
           type: object
   version: v1alpha1

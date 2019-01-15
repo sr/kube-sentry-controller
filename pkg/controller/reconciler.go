@@ -25,7 +25,6 @@ type reconcilerSet struct {
 	scheme  *runtime.Scheme
 	kube    client.Client // kubernetes API client
 	sentry  sentry.Client // sentry API client
-	org     string        // slug of the sentry organization being managed
 	timeout time.Duration // timeout for reconcilation attempts
 }
 
@@ -35,26 +34,21 @@ func (r *reconcilerSet) Team(request reconcile.Request) (reconcile.Result, error
 	defer cancel()
 
 	instance := &sentryv1alpha1.Team{}
-	err := r.kube.Get(ctx, request.NamespacedName, instance)
-	if err != nil {
+	if err := r.kube.Get(ctx, request.NamespacedName, instance); err != nil {
 		if apierrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
 	}
 
-	org, _, err := r.sentry.GetOrganization(ctx, r.org)
-	if err != nil {
-		return reconcile.Result{}, errors.Wrapf(err, "failed to get organization %s", r.org)
-	}
-
 	if !instance.ObjectMeta.DeletionTimestamp.IsZero() {
 		if !hasFinalizer(instance) {
-			return reconcile.Result{}, err
+			return reconcile.Result{}, nil
 		}
 
 		if instance.Status.Slug != "" {
-			resp, err := r.sentry.DeleteTeam(ctx, org.Slug, instance.Status.Slug)
+			resp, err := r.sentry.DeleteTeam(ctx, instance.Status.OrganizationSlug, instance.Status.Slug)
+
 			if err != nil && resp.StatusCode != http.StatusNotFound {
 				return reconcile.Result{}, errors.Wrapf(err, "failed to delete team %s", instance.Status.Slug)
 			}
@@ -75,16 +69,17 @@ func (r *reconcilerSet) Team(request reconcile.Request) (reconcile.Result, error
 	}
 
 	if instance.Status.Slug == "" {
-		team, _, err := r.sentry.CreateTeam(ctx, org.Slug, instance.Spec.Slug, instance.Spec.Slug)
+		team, _, err := r.sentry.CreateTeam(ctx, instance.Spec.OrganizationSlug, instance.Spec.Slug, instance.Spec.Slug)
 		if err != nil {
 			return reconcile.Result{}, errors.Wrapf(err, "failed to create team %s", instance.Spec.Slug)
 		}
 		instance.Status.Slug = team.Slug
+		instance.Status.OrganizationSlug = instance.Spec.OrganizationSlug
 
 		return reconcile.Result{}, r.kube.Update(ctx, instance)
 	}
 
-	team, _, err := r.sentry.GetTeam(ctx, org.Slug, instance.Status.Slug)
+	team, _, err := r.sentry.GetTeam(ctx, instance.Status.OrganizationSlug, instance.Status.Slug)
 	if err != nil {
 		return reconcile.Result{}, errors.Wrapf(err, "failed to get team %s", instance.Status.Slug)
 	}
@@ -93,9 +88,9 @@ func (r *reconcilerSet) Team(request reconcile.Request) (reconcile.Result, error
 		return reconcile.Result{}, nil
 	}
 
-	team, _, err = r.sentry.UpdateTeam(ctx, org.Slug, team.Slug, instance.Spec.Slug, instance.Spec.Slug)
+	team, _, err = r.sentry.UpdateTeam(ctx, instance.Status.OrganizationSlug, instance.Status.Slug, instance.Spec.Slug, instance.Spec.Slug)
 	if err != nil {
-		return reconcile.Result{}, errors.Wrapf(err, "failed to update project %s", team.Slug)
+		return reconcile.Result{}, errors.Wrapf(err, "failed to update team %s", team.Slug)
 	}
 	instance.Status.Slug = team.Slug
 	return reconcile.Result{}, r.kube.Update(ctx, instance)
@@ -115,21 +110,16 @@ func (r *reconcilerSet) Project(request reconcile.Request) (reconcile.Result, er
 		return reconcile.Result{}, err
 	}
 
-	org, _, err := r.sentry.GetOrganization(ctx, r.org)
-	if err != nil {
-		return reconcile.Result{}, errors.Wrapf(err, "failed to get organization %s", r.org)
-	}
-
 	if !instance.ObjectMeta.DeletionTimestamp.IsZero() {
 		if !hasFinalizer(instance) {
 			return reconcile.Result{}, err
 		}
 
 		if instance.Status.Slug != "" {
-			resp, err := r.sentry.DeleteProject(ctx, org.Slug, instance.Status.Slug)
+			resp, err := r.sentry.DeleteProject(ctx, instance.Status.OrganizationSlug, instance.Status.Slug)
 
 			if err != nil && resp.StatusCode != http.StatusNotFound {
-				return reconcile.Result{}, errors.Wrapf(err, "failed to delete project %s/%s", org.Slug, instance.Status.Slug)
+				return reconcile.Result{}, errors.Wrapf(err, "failed to delete project %s", instance.Status.Slug)
 			}
 		}
 
@@ -148,15 +138,17 @@ func (r *reconcilerSet) Project(request reconcile.Request) (reconcile.Result, er
 	}
 
 	if instance.Status.Slug == "" {
-		proj, _, err := r.sentry.CreateProject(ctx, org.Slug, instance.Spec.TeamSlug, instance.Spec.Slug, instance.Spec.Slug)
+		proj, _, err := r.sentry.CreateProject(ctx, instance.Spec.OrganizationSlug, instance.Spec.TeamSlug, instance.Spec.Slug, instance.Spec.Slug)
 		if err != nil {
 			return reconcile.Result{}, errors.Wrapf(err, "failed to create project %s", instance.Spec.Slug)
 		}
 		instance.Status.Slug = proj.Slug
+		instance.Status.TeamSlug = instance.Spec.TeamSlug
+		instance.Status.OrganizationSlug = instance.Spec.OrganizationSlug
 		return reconcile.Result{}, r.kube.Update(ctx, instance)
 	}
 
-	proj, _, err := r.sentry.GetProject(ctx, org.Slug, instance.Status.Slug)
+	proj, _, err := r.sentry.GetProject(ctx, instance.Status.OrganizationSlug, instance.Status.Slug)
 	if err != nil {
 		return reconcile.Result{}, errors.Wrapf(err, "failed to get project %s", instance.Status.Slug)
 	}
@@ -165,7 +157,7 @@ func (r *reconcilerSet) Project(request reconcile.Request) (reconcile.Result, er
 		return reconcile.Result{}, nil
 	}
 
-	proj, _, err = r.sentry.UpdateProject(ctx, org.Slug, proj.Slug, instance.Spec.Slug, instance.Spec.Slug)
+	proj, _, err = r.sentry.UpdateProject(ctx, instance.Status.OrganizationSlug, proj.Slug, instance.Spec.Slug, instance.Spec.Slug)
 	if err != nil {
 		return reconcile.Result{}, errors.Wrapf(err, "failed to update project %s", instance.Status.Slug)
 	}
@@ -188,18 +180,13 @@ func (r *reconcilerSet) ClientKey(request reconcile.Request) (reconcile.Result, 
 		return reconcile.Result{}, err
 	}
 
-	org, _, err := r.sentry.GetOrganization(ctx, r.org)
-	if err != nil {
-		return reconcile.Result{}, errors.Wrapf(err, "failed to get organization %s", r.org)
-	}
-
 	if !instance.ObjectMeta.DeletionTimestamp.IsZero() {
 		if !hasFinalizer(instance) {
 			return reconcile.Result{}, nil
 		}
 
 		if instance.Status.ID != "" {
-			resp, err := r.sentry.DeleteClientKey(ctx, org.Slug, instance.Spec.ProjectSlug, instance.Status.ID)
+			resp, err := r.sentry.DeleteClientKey(ctx, instance.Status.OrganizationSlug, instance.Status.ProjectSlug, instance.Status.ID)
 
 			if err != nil && resp.StatusCode != http.StatusNotFound {
 				return reconcile.Result{}, errors.Wrapf(err, "failed to delete client key for project %s", instance.Spec.ProjectSlug)
@@ -222,18 +209,20 @@ func (r *reconcilerSet) ClientKey(request reconcile.Request) (reconcile.Result, 
 
 	var key *sentry.ClientKey
 	if instance.Status.ID == "" {
-		key, _, err = r.sentry.CreateClientKey(ctx, org.Slug, instance.Spec.ProjectSlug, instance.Spec.Name)
+		key, _, err = r.sentry.CreateClientKey(ctx, instance.Spec.OrganizationSlug, instance.Spec.ProjectSlug, instance.Spec.Name)
 		if err != nil {
 			return reconcile.Result{}, errors.Wrapf(err, "failed to create client key for project %s", instance.Spec.ProjectSlug)
 		}
 
 		instance.Status.ID = key.ID
+		instance.Status.ProjectSlug = instance.Spec.ProjectSlug
+		instance.Status.OrganizationSlug = instance.Spec.OrganizationSlug
 
 		if err := r.kube.Update(ctx, instance); err != nil {
 			return reconcile.Result{}, err
 		}
 	} else {
-		keys, _, err := r.sentry.GetClientKeys(ctx, org.Slug, instance.Spec.ProjectSlug)
+		keys, _, err := r.sentry.GetClientKeys(ctx, instance.Status.OrganizationSlug, instance.Status.ProjectSlug)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -249,7 +238,7 @@ func (r *reconcilerSet) ClientKey(request reconcile.Request) (reconcile.Result, 
 	}
 
 	if key.Name != instance.Spec.Name {
-		if _, err := r.sentry.UpdateClientKey(ctx, org.Slug, instance.Spec.ProjectSlug, instance.Status.ID, instance.Spec.Name); err != nil {
+		if _, err := r.sentry.UpdateClientKey(ctx, instance.Status.OrganizationSlug, instance.Status.ProjectSlug, instance.Status.ID, instance.Spec.Name); err != nil {
 			return reconcile.Result{}, errors.Wrap(err, "failed to rename client key")
 		}
 	}

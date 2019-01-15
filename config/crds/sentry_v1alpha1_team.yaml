@@ -28,17 +28,23 @@ spec:
           type: object
         spec:
           properties:
+            organization:
+              type: string
             slug:
               type: string
           required:
           - slug
+          - organization
           type: object
         status:
           properties:
+            organization:
+              type: string
             slug:
               type: string
           required:
           - slug
+          - organization
           type: object
   version: v1alpha1
 status:

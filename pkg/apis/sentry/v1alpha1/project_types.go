@@ -6,13 +6,16 @@ import (
 
 // ProjectSpec defines the desired state of Project
 type ProjectSpec struct {
-	Slug     string `json:"slug"`
-	TeamSlug string `json:"teamSlug"`
+	OrganizationSlug string `json:"organization"`
+	TeamSlug         string `json:"team"`
+	Slug             string `json:"slug"`
 }
 
 // ProjectStatus defines the observed state of Project
 type ProjectStatus struct {
-	Slug string `json:"slug"`
+	OrganizationSlug string `json:"organization"`
+	TeamSlug         string `json:"team"`
+	Slug             string `json:"slug"`
 }
 
 // +genclient
