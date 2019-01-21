@@ -1,0 +1,26 @@
+---
+apiVersion: sentry.sr.github.com/v1alpha1
+kind: Team
+metadata:
+  name: example
+spec:
+  slug: example
+  organization: SENTRY_ORGANIZATION
+---
+apiVersion: sentry.sr.github.com/v1alpha1
+kind: Project
+metadata:
+  name: example
+spec:
+  slug: example
+  team: example
+  organization: SENTRY_ORGANIZATION
+---
+apiVersion: sentry.sr.github.com/v1alpha1
+kind: ClientKey
+metadata:
+  name: example
+spec:
+  name: example
+  project: example
+  organization: SENTRY_ORGANIZATION
