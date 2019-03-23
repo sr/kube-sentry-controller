@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "addtoscheme_sentry_v1alpha1.go",
+        "apis.go",
+    ],
+    importpath = "github.com/sr/kube-sentry-controller/pkg/apis",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/apis/sentry/v1alpha1:go_default_library",
+        "//vendor/k8s.io/apimachinery/pkg/runtime:go_default_library",
+    ],
+)
