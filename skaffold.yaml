@@ -1,0 +1,10 @@
+apiVersion: skaffold/v1beta7
+kind: Config
+build:
+  artifacts:
+  - image: kube-sentry-controller
+    bazel:
+      target: //:kube-sentry-controller.tar
+deploy:
+  kustomize:
+    path: config/dev/

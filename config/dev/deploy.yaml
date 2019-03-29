@@ -1,0 +1,31 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kube-sentry-controller
+spec:
+  selector:
+    matchLabels:
+      name: kube-sentry-controller
+  template:
+    metadata:
+      labels:
+        name: kube-sentry-controller
+    spec:
+      containers:
+      - name: controller
+        image: kube-sentry-controller
+        envFrom:
+        - secretRef:
+            name: env
+        args:
+        - -api-token
+        - $(SENTRY_API_TOKEN)
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            cpu: 100m
+            memory: 30Mi
+          requests:
+            cpu: 100m
+            memory: 20Mi

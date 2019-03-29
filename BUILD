@@ -30,8 +30,9 @@ go_binary(
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 
 go_image(
-    name = "container_image",
+    name = "kube-sentry-controller",
     embed = [":go_default_library"],
-    importpath = "github.com/sr/kube-sentry-controller",
     visibility = ["//visibility:public"],
+    goos = "linux",
+    goarch = "amd64",
 )
