@@ -1,11 +1,23 @@
+.PHONY: install test apply generate tools
+
+export GO111MODULE = on
+
+install:
+	go install -v ./
+
+test:
+	go test -v ./...
+
 # Install CRDs into a cluster
-install: manifests
+apply: generate
 	kubectl apply -f config/crds
 
-# Generate manifests e.g. CRD, RBAC etc.
-manifests:
-	go run vendor/sigs.k8s.io/controller-tools/cmd/controller-gen/main.go all
-
-# Generate code
-generate:
+# Generate code and manifests  (e.g. CRD, RBAC, etc)
+generate: tools
 	go generate ./pkg/...
+	controller-gen all
+
+tools:
+	go install -v k8s.io/code-generator/cmd/client-gen \
+		k8s.io/code-generator/cmd/deepcopy-gen \
+		sigs.k8s.io/controller-tools/cmd/controller-gen
