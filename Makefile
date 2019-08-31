@@ -8,6 +8,10 @@ install:
 test:
 	go test -v ./...
 
+lint:
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint
+	golangci-lint run -v ./...
+
 # Install CRDs into a cluster
 apply: generate
 	kubectl apply -f config/crds

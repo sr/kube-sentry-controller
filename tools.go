@@ -3,7 +3,8 @@
 package tools
 
 import (
-	_ "k8s.io/code-generator/cmd/client-gen" # for go generate
-	_ "k8s.io/code-generator/cmd/deepcopy-gen" # for go generate
+	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
+	_ "k8s.io/code-generator/cmd/client-gen"
+	_ "k8s.io/code-generator/cmd/deepcopy-gen"
 	_ "sigs.k8s.io/controller-tools/cmd/controller-gen"
 )
