@@ -1,27 +1,24 @@
-.PHONY: install test apply generate tools
+.PHONY: install test lint apply generate
 
-export GO111MODULE = on
+GO ?= go
+
+all: install test lint generate
 
 install:
-	go install -v ./
+	$(GO) install ./
 
 test:
-	go test -v ./...
+	$(GO) test ./...
 
 lint:
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint
-	golangci-lint run -v ./...
+	$(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint
+	golangci-lint run ./...
 
 # Install CRDs into a cluster
 apply: generate
 	kubectl apply -f config/crds
 
 # Generate code and manifests  (e.g. CRD, RBAC, etc)
-generate: tools
-	go generate ./pkg/...
-	controller-gen all
-
-tools:
-	go install -v k8s.io/code-generator/cmd/client-gen \
-		k8s.io/code-generator/cmd/deepcopy-gen \
-		sigs.k8s.io/controller-tools/cmd/controller-gen
+generate:
+	$(GO) install sigs.k8s.io/controller-tools/cmd/controller-gen
+	controller-gen object crd paths=./pkg/apis/... output:crd:dir=config/crds
