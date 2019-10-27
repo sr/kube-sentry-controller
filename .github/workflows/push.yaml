@@ -1,24 +1,11 @@
 on: push
-name: Build
+name: Push
 jobs:
   checks:
-    name: run
+    name: Build
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
-    - name: lint
-      uses: cedrickring/golang-action/go1.13@1.4.1
+    - uses: cedrickring/golang-action/go1.13@1.4.1
       with:
-        args: make lint
-    - name: build
-      uses: cedrickring/golang-action/go1.13@1.4.1
-      with:
-        args: make install
-    - name: test
-      uses: cedrickring/golang-action/go1.13@1.4.1
-      with:
-        args: make test
-    - name: generate
-      uses: cedrickring/golang-action/go1.13@1.4.1
-      with:
-        args: make generate
+        args: make install test lint
