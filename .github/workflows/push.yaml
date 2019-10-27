@@ -6,7 +6,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
-    - name: run
+    - name: lint
       uses: cedrickring/golang-action/go1.13@1.4.1
       with:
-        args: make ci
+        args: make lint
+    - name: build
+      uses: cedrickring/golang-action/go1.13@1.4.1
+      with:
+        args: make install
+    - name: test
+      uses: cedrickring/golang-action/go1.13@1.4.1
+      with:
+        args: make test
+    - name: generate
+      uses: cedrickring/golang-action/go1.13@1.4.1
+      with:
+        args: make generate
