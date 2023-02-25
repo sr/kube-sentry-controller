@@ -19,7 +19,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45 // indirect
 	google.golang.org/appengine v1.6.2 // indirect
 	k8s.io/api v0.0.0-20190918195907-bd6ac527cfd2
-	k8s.io/apimachinery v0.0.0-20190817020851-f2f3a405f61d
+	k8s.io/apimachinery v0.15.7
 	k8s.io/client-go v0.0.0-20190918200256-06eb1244587a
 	k8s.io/code-generator v0.0.0-20190831074504-732c9ca86353
 	k8s.io/gengo v0.0.0-20190826232639-a874a240740c // indirect
